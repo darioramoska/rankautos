@@ -1,0 +1,30 @@
+{
+  "name": "rankautos-ingestion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-data ingestion pipeline for RankAutos (Supabase/Postgres backed).",
+  "type": "module",
+  "scripts": {
+    "migrate": "tsx src/migrate.ts",
+    "ingest:tesla": "tsx src/sources/tesla.ts",
+    "ingest:ncap": "tsx src/sources/ncap.ts",
+    "ingest:autoscout24": "tsx src/sources/autoscout24.ts",
+    "ingest:mobile-de": "tsx src/sources/mobile-de.ts",
+    "typecheck": "tsc --noEmit",
+    "migrate:up": "tsx src/migrateUp.ts",
+    "backfill:catalog": "tsx src/backfillCatalog.ts",
+    "sync:mock": "tsx src/syncMockCatalog.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}

@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RankAutos — Find Your Perfect Car</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f7f5f2;--surface:#fff;--dark:#092477;--mid:#6b6560;
+    --border:#e4e0db;--accent:#9b2c72;--accent-light:oklch(0.94 0.06 340);--warm:oklch(0.72 0.17 55);--warm-light:oklch(0.96 0.06 55);
+    --green:oklch(0.68 0.18 145);--yellow:oklch(0.78 0.18 88);--red:oklch(0.62 0.18 25);
+    --radius:16px;--shadow:0 2px 12px rgba(0,0,0,.07);--shadow-lg:0 8px 40px rgba(0,0,0,.13);
+  }
+  html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--dark)}
+  #root{height:100%}
+  ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  button{font-family:inherit;cursor:pointer;border:none;background:none}
+  a{color:inherit;text-decoration:none}
+  input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--border);outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--dark);border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.25);cursor:grab}
+  input[type=range]:active::-webkit-slider-thumb{cursor:grabbing;transform:scale(1.1)}
+  /* dual-range: both tracks pointer-events:none so thumbs are always reachable */
+  .dual-range{position:relative;height:28px;display:flex;align-items:center}
+  .dual-range input[type=range]{position:absolute;width:100%;pointer-events:none;-webkit-appearance:none;appearance:none;background:transparent;height:4px}
+  .dual-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--dark);border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.25);cursor:grab;pointer-events:all}
+  .dual-range input[type=range]:active::-webkit-slider-thumb{cursor:grabbing;transform:scale(1.1)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel">
+// Tweaks panel stub — production build (no visible panel)
+const { useState: _useState } = React;
+function useTweaks(defaults) {
+  const [t, setT] = _useState(defaults);
+  return [t, (k, v) => setT(prev => ({...prev, [k]: v}))];
+}
+function TweaksPanel() { return null; }
+function TweakSection() { return null; }
+function TweakColor() { return null; }
+function TweakSlider() { return null; }
+function TweakToggle() { return null; }
+</script>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+// ─── static data ─────────────────────────────────────────────────────────────
+const CRITERIA = [
+  { key:'range',        label:'Range / Efficiency', desc:'Real-world km range or fuel economy' },
+  { key:'safety',       label:'Safety',             desc:'Euro NCAP rating + active safety systems' },
+  { key:'practicality', label:'Practicality',       desc:'Boot space, interior room, flexibility' },
+  { key:'tech',         label:'Technology',         desc:'Infotainment, driver assist, connectivity' },
+  { key:'reliability',  label:'Reliability',        desc:'Owner reliability & warranty coverage' },
+  { key:'value',        label:'Value for Money',    desc:'Price vs equipment & running costs' },
+  { key:'charging',     label:'Charging Speed',     desc:'Peak DC charging rate & network access' },
+];
+
+const PLATFORMS = [
+  { id:'AutoScout24', label:'AutoScout24', flag:'🇪🇺', url:'https://www.autoscout24.com' },
+  { id:'mobile.de',   label:'mobile.de',  flag:'🇩🇪', url:'https://www.mobile.de' },
+  { id:'LaCentrale',  label:'LaCentrale', flag:'🇫🇷', url:'https://www.lacentrale.fr' },
+  { id:'Marktplaats', label:'Marktplaats',flag:'🇳🇱', url:'https://www.marktplaats.nl' },
+  { id:'Otomoto',     label:'Otomoto',    flag:'🇵🇱', url:'https://www.otomoto.pl' },
+  { id:'Coches.net',  label:'Coches.net', flag:'🇪🇸', url:'https://www.coches.net' },
+  { id:'Tesla.com',   label:'Tesla.com',  flag:'🏭',  url:'https://www.tesla.com/en_eu' },
+];
+
+const S = {
+  EU:  { name:'AutoScout24', url:'https://www.autoscout24.com', flag:'🇪🇺' },
+  DE:  { name:'mobile.de',   url:'https://www.mobile.de',       flag:'🇩🇪' },
+  FR:  { name:'LaCentrale',  url:'https://www.lacentrale.fr',   flag:'🇫🇷' },
+  NL:  { name:'Marktplaats', url:'https://www.marktplaats.nl',  flag:'🇳🇱' },
+  PL:  { name:'Otomoto',     url:'https://www.otomoto.pl',      flag:'🇵🇱' },
+  ES:  { name:'Coches.net',  url:'https://www.coches.net',      flag:'🇪🇸' },
+  IT:  { name:'AutoScout24', url:'https://www.autoscout24.it',  flag:'🇮🇹' },
+  MFR: { name:'Tesla.com',   url:'https://www.tesla.com/en_eu', flag:'🏭'  },
+};
+
+const CAR_DATA = [
+  { id:1,  name:'Model Y Long Range', brand:'Tesla',      type:'SUV',       fuel:'Electric', wikiQuery:'Tesla Model Y',
+    msrp:44990, seats:5, range_km:533, boot_l:854, charge_kw:250, ncap:5, year:2024, color:'#c00', badge:'Best Seller', transmission:'Automatic',
+    scores:{ range:9.2, safety:9.5, practicality:8.8, tech:9.8, reliability:7.0, value:7.5, charging:9.5 },
+    listings:[
+      { id:'y1',...S.MFR, price:44990, year:2024, mileage:0,     condition:'New',  location:'Online', ext_color:'White', transmission:'Automatic' },
+      { id:'y2',...S.EU,  price:43200, year:2024, mileage:120,   condition:'New',  location:'München', ext_color:'White', transmission:'Automatic' },
+      { id:'y3',...S.DE,  price:39900, year:2023, mileage:14200, condition:'Used', location:'Berlin', ext_color:'Black', transmission:'Automatic' },
+      { id:'y4',...S.DE,  price:37500, year:2022, mileage:31000, condition:'Used', location:'Hamburg', ext_color:'Red', transmission:'Automatic' },
+      { id:'y5',...S.NL,  price:38800, year:2023, mileage:18500, condition:'Used', location:'Amsterdam', ext_color:'Grey', transmission:'Automatic' },
+      { id:'y6',...S.PL,  price:35900, year:2022, mileage:38000, condition:'Used', location:'Warsaw', ext_color:'Silver', transmission:'Automatic' },
+    ]},
+  { id:2,  name:'Ioniq 5 RWD', brand:'Hyundai',    type:'SUV',       fuel:'Electric', wikiQuery:'Hyundai Ioniq 5',
+    msrp:41900, seats:5, range_km:507, boot_l:527, charge_kw:220, ncap:5, year:2024, color:'#1a4d8f', badge:'Top Rated', transmission:'Automatic',
+    scores:{ range:8.8, safety:9.5, practicality:7.8, tech:9.0, reliability:8.5, value:8.5, charging:9.2 },
+    listings:[
+      { id:'i1',...S.EU, price:41900, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Silver', transmission:'Automatic' },
+      { id:'i2',...S.DE, price:40500, year:2024, mileage:200,   condition:'New',  location:'Frankfurt', ext_color:'White', transmission:'Automatic' },
+      { id:'i3',...S.DE, price:37200, year:2023, mileage:12000, condition:'Used', location:'Köln', ext_color:'Blue', transmission:'Automatic' },
+      { id:'i4',...S.NL, price:36800, year:2023, mileage:19000, condition:'Used', location:'Rotterdam', ext_color:'Grey', transmission:'Automatic' },
+      { id:'i5',...S.ES, price:38000, year:2023, mileage:8500,  condition:'Used', location:'Madrid', ext_color:'White', transmission:'Automatic' },
+    ]},
+  { id:3,  name:'EV6 Standard RWD', brand:'Kia',    type:'Crossover', fuel:'Electric', wikiQuery:'Kia EV6',
+    msrp:40990, seats:5, range_km:394, boot_l:480, charge_kw:233, ncap:5, year:2024, color:'#2e7d32', transmission:'Automatic',
+    scores:{ range:7.5, safety:9.5, practicality:7.5, tech:8.8, reliability:8.5, value:8.8, charging:9.3 },
+    listings:[
+      { id:'k1',...S.EU, price:40990, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Grey', transmission:'Automatic' },
+      { id:'k2',...S.DE, price:39500, year:2024, mileage:150,   condition:'New',  location:'Stuttgart', ext_color:'White', transmission:'Automatic' },
+      { id:'k3',...S.DE, price:35800, year:2023, mileage:16000, condition:'Used', location:'Düsseldorf', ext_color:'Blue', transmission:'Automatic' },
+      { id:'k4',...S.PL, price:33900, year:2022, mileage:28000, condition:'Used', location:'Kraków', ext_color:'Black', transmission:'Automatic' },
+      { id:'k5',...S.IT, price:37200, year:2023, mileage:9000,  condition:'Used', location:'Milan', ext_color:'Silver', transmission:'Automatic' },
+    ]},
+  { id:4,  name:'Enyaq 85', brand:'Škoda',          type:'SUV',       fuel:'Electric', wikiQuery:'Škoda Enyaq',
+    msrp:39950, seats:5, range_km:566, boot_l:585, charge_kw:135, ncap:5, year:2024, color:'#444', badge:'Best Range', transmission:'Automatic',
+    scores:{ range:9.5, safety:8.5, practicality:8.5, tech:7.5, reliability:8.0, value:8.8, charging:7.5 },
+    listings:[
+      { id:'e1',...S.EU, price:39950, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'White', transmission:'Automatic' },
+      { id:'e2',...S.DE, price:38800, year:2024, mileage:100,   condition:'New',  location:'Leipzig', ext_color:'Silver', transmission:'Automatic' },
+      { id:'e3',...S.DE, price:35200, year:2023, mileage:11000, condition:'Used', location:'Dresden', ext_color:'Black', transmission:'Automatic' },
+      { id:'e4',...S.PL, price:32500, year:2022, mileage:24000, condition:'Used', location:'Prague', ext_color:'Grey', transmission:'Automatic' },
+    ]},
+  { id:5,  name:'ID.4 Pro', brand:'Volkswagen',     type:'SUV',       fuel:'Electric', wikiQuery:'Volkswagen ID.4',
+    msrp:43995, seats:5, range_km:529, boot_l:543, charge_kw:135, ncap:5, year:2024, color:'#1565c0', transmission:'Automatic',
+    scores:{ range:9.0, safety:9.0, practicality:8.0, tech:8.0, reliability:8.5, value:8.0, charging:7.5 },
+    listings:[
+      { id:'v1',...S.EU, price:43995, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'White', transmission:'Automatic' },
+      { id:'v2',...S.DE, price:42500, year:2024, mileage:300,   condition:'New',  location:'Wolfsburg', ext_color:'Blue', transmission:'Automatic' },
+      { id:'v3',...S.DE, price:37900, year:2023, mileage:13500, condition:'Used', location:'München', ext_color:'Grey', transmission:'Automatic' },
+      { id:'v4',...S.NL, price:36500, year:2022, mileage:22000, condition:'Used', location:'Utrecht', ext_color:'Silver', transmission:'Automatic' },
+      { id:'v5',...S.ES, price:38900, year:2023, mileage:7000,  condition:'Used', location:'Barcelona', ext_color:'White', transmission:'Automatic' },
+    ]},
+  { id:6,  name:'Q4 e-tron 40', brand:'Audi',       type:'SUV',       fuel:'Electric', wikiQuery:'Audi Q4 e-tron',
+    msrp:47300, seats:5, range_km:521, boot_l:520, charge_kw:135, ncap:5, year:2024, color:'#8d1e1e', transmission:'Automatic',
+    scores:{ range:9.0, safety:9.0, practicality:7.8, tech:8.0, reliability:7.8, value:7.0, charging:7.5 },
+    listings:[
+      { id:'a1',...S.EU, price:47300, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Grey', transmission:'Automatic' },
+      { id:'a2',...S.DE, price:45900, year:2024, mileage:200,   condition:'New',  location:'Ingolstadt', ext_color:'Black', transmission:'Automatic' },
+      { id:'a3',...S.DE, price:41500, year:2023, mileage:10000, condition:'Used', location:'Nürnberg', ext_color:'Silver', transmission:'Automatic' },
+      { id:'a4',...S.IT, price:42800, year:2023, mileage:8000,  condition:'Used', location:'Rome', ext_color:'White', transmission:'Automatic' },
+    ]},
+  { id:7,  name:'iX3 M Sport', brand:'BMW',          type:'SUV',       fuel:'Electric', wikiQuery:'BMW iX3',
+    msrp:55900, seats:5, range_km:460, boot_l:510, charge_kw:150, ncap:5, year:2024, color:'#1c2d6b', transmission:'Automatic',
+    scores:{ range:8.2, safety:9.0, practicality:7.8, tech:8.5, reliability:8.0, value:6.5, charging:7.8 },
+    listings:[
+      { id:'b1',...S.EU, price:55900, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Black', transmission:'Automatic' },
+      { id:'b2',...S.DE, price:54200, year:2024, mileage:150,   condition:'New',  location:'München', ext_color:'Blue', transmission:'Automatic' },
+      { id:'b3',...S.DE, price:48800, year:2023, mileage:9500,  condition:'Used', location:'Hamburg', ext_color:'White', transmission:'Automatic' },
+      { id:'b4',...S.NL, price:47200, year:2022, mileage:20000, condition:'Used', location:'Den Haag', ext_color:'Grey', transmission:'Automatic' },
+    ]},
+  { id:8,  name:'EX40 Single Motor', brand:'Volvo',  type:'SUV',       fuel:'Electric', wikiQuery:'Volvo EX40',
+    msrp:43350, seats:5, range_km:437, boot_l:419, charge_kw:150, ncap:5, year:2024, color:'#1b3a2d', badge:'Safest', transmission:'Automatic',
+    scores:{ range:8.0, safety:9.5, practicality:7.0, tech:8.2, reliability:8.5, value:7.5, charging:7.8 },
+    listings:[
+      { id:'vx1',...S.EU, price:43350, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Silver', transmission:'Automatic' },
+      { id:'vx2',...S.DE, price:42100, year:2024, mileage:200,   condition:'New',  location:'Göteborg', ext_color:'White', transmission:'Automatic' },
+      { id:'vx3',...S.DE, price:37900, year:2023, mileage:14000, condition:'Used', location:'Stockholm', ext_color:'Black', transmission:'Automatic' },
+      { id:'vx4',...S.NL, price:36500, year:2022, mileage:25000, condition:'Used', location:'Eindhoven', ext_color:'Grey', transmission:'Automatic' },
+    ]},
+  { id:9,  name:'Mach-E AWD', brand:'Ford',          type:'SUV',       fuel:'Electric', wikiQuery:'Ford Mustang Mach-E',
+    msrp:46900, seats:5, range_km:490, boot_l:402, charge_kw:135, ncap:5, year:2024, color:'#003087', transmission:'Automatic',
+    scores:{ range:8.8, safety:9.0, practicality:7.0, tech:8.5, reliability:7.0, value:7.0, charging:7.5 },
+    listings:[
+      { id:'f1',...S.EU, price:46900, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Blue', transmission:'Automatic' },
+      { id:'f2',...S.DE, price:43500, year:2023, mileage:8000,  condition:'Used', location:'Köln', ext_color:'Grey', transmission:'Automatic' },
+      { id:'f3',...S.NL, price:41800, year:2022, mileage:22000, condition:'Used', location:'Amsterdam', ext_color:'Black', transmission:'Automatic' },
+      { id:'f4',...S.ES, price:40500, year:2022, mileage:31000, condition:'Used', location:'Valencia', ext_color:'Red', transmission:'Automatic' },
+    ]},
+  { id:10, name:'Megane E-Tech 220', brand:'Renault', type:'Hatchback', fuel:'Electric', wikiQuery:'Renault Megane E-Tech Electric',
+    msrp:34990, seats:5, range_km:450, boot_l:440, charge_kw:130, ncap:5, year:2024, color:'#c8860a', badge:'Best Value', transmission:'Automatic',
+    scores:{ range:8.2, safety:9.0, practicality:7.2, tech:8.0, reliability:7.5, value:9.0, charging:7.2 },
+    listings:[
+      { id:'r1',...S.EU, price:34990, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'White', transmission:'Automatic' },
+      { id:'r2',...S.FR, price:33800, year:2024, mileage:100,   condition:'New',  location:'Paris', ext_color:'Red', transmission:'Automatic' },
+      { id:'r3',...S.FR, price:29500, year:2023, mileage:15000, condition:'Used', location:'Lyon', ext_color:'Grey', transmission:'Automatic' },
+      { id:'r4',...S.ES, price:28900, year:2022, mileage:24000, condition:'Used', location:'Seville', ext_color:'Blue', transmission:'Automatic' },
+    ]},
+  { id:11, name:'EQA 250+', brand:'Mercedes',        type:'SUV',       fuel:'Electric', wikiQuery:'Mercedes-Benz EQA',
+    msrp:46500, seats:5, range_km:426, boot_l:340, charge_kw:100, ncap:5, year:2024, color:'#888', transmission:'Automatic',
+    scores:{ range:7.8, safety:9.0, practicality:6.5, tech:8.5, reliability:7.5, value:6.5, charging:6.5 },
+    listings:[
+      { id:'m1',...S.EU, price:46500, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Silver', transmission:'Automatic' },
+      { id:'m2',...S.DE, price:44800, year:2024, mileage:300,   condition:'New',  location:'Stuttgart', ext_color:'Black', transmission:'Automatic' },
+      { id:'m3',...S.DE, price:40200, year:2023, mileage:11000, condition:'Used', location:'Frankfurt', ext_color:'White', transmission:'Automatic' },
+      { id:'m4',...S.IT, price:38900, year:2022, mileage:19000, condition:'Used', location:'Turin', ext_color:'Grey', transmission:'Automatic' },
+    ]},
+  { id:12, name:'e-2008 GT', brand:'Peugeot',        type:'Crossover', fuel:'Electric', wikiQuery:'Peugeot e-2008',
+    msrp:35900, seats:5, range_km:400, boot_l:434, charge_kw:100, ncap:4, year:2024, color:'#5c3b9e', transmission:'Automatic',
+    scores:{ range:7.5, safety:8.0, practicality:7.2, tech:7.5, reliability:7.5, value:8.5, charging:6.5 },
+    listings:[
+      { id:'p1',...S.EU, price:35900, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Grey', transmission:'Automatic' },
+      { id:'p2',...S.FR, price:34200, year:2024, mileage:100,   condition:'New',  location:'Bordeaux', ext_color:'White', transmission:'Automatic' },
+      { id:'p3',...S.FR, price:29900, year:2023, mileage:13000, condition:'Used', location:'Marseille', ext_color:'Blue', transmission:'Automatic' },
+      { id:'p4',...S.ES, price:28500, year:2022, mileage:22000, condition:'Used', location:'Madrid', ext_color:'Black', transmission:'Automatic' },
+    ]},
+  { id:13, name:'RAV4 Hybrid AWD', brand:'Toyota',   type:'SUV',       fuel:'Hybrid',   wikiQuery:'Toyota RAV4 fifth generation',
+    msrp:37900, seats:5, range_km:950, boot_l:580, charge_kw:0, ncap:5, year:2024, color:'#c41230', badge:'Most Reliable', transmission:'Automatic',
+    scores:{ range:8.0, safety:9.0, practicality:8.8, tech:7.5, reliability:9.5, value:8.5, charging:1.5 },
+    listings:[
+      { id:'t1',...S.EU, price:37900, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'White', transmission:'Automatic' },
+      { id:'t2',...S.DE, price:36500, year:2024, mileage:200,   condition:'New',  location:'München', ext_color:'Silver', transmission:'Automatic' },
+      { id:'t3',...S.DE, price:32800, year:2023, mileage:18000, condition:'Used', location:'Berlin', ext_color:'Grey', transmission:'Automatic' },
+      { id:'t4',...S.NL, price:31500, year:2022, mileage:29000, condition:'Used', location:'Rotterdam', ext_color:'Black', transmission:'Automatic' },
+      { id:'t5',...S.PL, price:30200, year:2022, mileage:35000, condition:'Used', location:'Warsaw', ext_color:'Red', transmission:'Automatic' },
+    ]},
+  { id:14, name:'XC60 Recharge T6', brand:'Volvo',   type:'SUV',       fuel:'Hybrid',   wikiQuery:'Volvo XC60 second generation',
+    msrp:57900, seats:5, range_km:800, elec_range_km:45, boot_l:505, charge_kw:50, ncap:5, year:2024, color:'#1b3a2d', transmission:'Automatic',
+    scores:{ range:7.5, safety:9.5, practicality:8.0, tech:8.8, reliability:8.5, value:6.0, charging:5.5 },
+    listings:[
+      { id:'xc1',...S.EU, price:57900, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Black', transmission:'Automatic' },
+      { id:'xc2',...S.DE, price:56200, year:2024, mileage:150,   condition:'New',  location:'München', ext_color:'Silver', transmission:'Automatic' },
+      { id:'xc3',...S.DE, price:50800, year:2023, mileage:12000, condition:'Used', location:'Hamburg', ext_color:'White', transmission:'Automatic' },
+      { id:'xc4',...S.NL, price:48500, year:2022, mileage:22000, condition:'Used', location:'Amsterdam', ext_color:'Grey', transmission:'Automatic' },
+    ]},
+  { id:15, name:'308 SW Hybrid', brand:'Peugeot',    type:'Estate',    fuel:'Hybrid',   wikiQuery:'Peugeot 308 third generation',
+    msrp:38900, seats:5, range_km:720, elec_range_km:60, boot_l:608, charge_kw:50, ncap:5, year:2024, color:'#5c3b9e', badge:'Most Practical', transmission:'Automatic',
+    scores:{ range:8.5, safety:8.5, practicality:9.0, tech:7.5, reliability:8.0, value:8.5, charging:5.0 },
+    listings:[
+      { id:'ps1',...S.EU, price:38900, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'White', transmission:'Automatic' },
+      { id:'ps2',...S.FR, price:37500, year:2024, mileage:100,   condition:'New',  location:'Paris', ext_color:'Blue', transmission:'Automatic' },
+      { id:'ps3',...S.FR, price:32900, year:2023, mileage:14000, condition:'Used', location:'Toulouse', ext_color:'Grey', transmission:'Automatic' },
+      { id:'ps4',...S.ES, price:31500, year:2022, mileage:26000, condition:'Used', location:'Zaragoza', ext_color:'Silver', transmission:'Automatic' },
+    ]},
+  { id:16, name:'Golf 1.5 eTSI', brand:'Volkswagen', type:'Hatchback', fuel:'Petrol',   wikiQuery:'Volkswagen Golf Mk8',
+    msrp:28990, seats:5, range_km:900, boot_l:380, charge_kw:0, ncap:5, year:2024, color:'#1565c0', transmission:'Manual',
+    scores:{ range:7.5, safety:9.0, practicality:7.0, tech:7.5, reliability:8.8, value:9.5, charging:0 },
+    listings:[
+      { id:'g1',...S.EU, price:28990, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'White', transmission:'Manual' },
+      { id:'g2',...S.DE, price:27800, year:2024, mileage:200,   condition:'New',  location:'Wolfsburg', ext_color:'Black', transmission:'Manual' },
+      { id:'g3',...S.DE, price:24500, year:2023, mileage:16000, condition:'Used', location:'Berlin', ext_color:'Blue', transmission:'Manual' },
+      { id:'g4',...S.PL, price:22900, year:2022, mileage:32000, condition:'Used', location:'Gdańsk', ext_color:'Grey', transmission:'Manual' },
+      { id:'g5',...S.ES, price:23500, year:2023, mileage:12000, condition:'Used', location:'Madrid', ext_color:'Red', transmission:'Manual' },
+    ]},
+  { id:17, name:'3 Series 318i', brand:'BMW',        type:'Sedan',     fuel:'Petrol',   wikiQuery:'BMW 3 Series G20',
+    msrp:39900, seats:5, range_km:850, boot_l:480, charge_kw:0, ncap:5, year:2024, color:'#1c2d6b', transmission:'Automatic',
+    scores:{ range:8.0, safety:9.0, practicality:7.5, tech:8.0, reliability:8.0, value:7.0, charging:0 },
+    listings:[
+      { id:'bm1',...S.EU, price:39900, year:2024, mileage:0,     condition:'New',  location:'Various', ext_color:'Black', transmission:'Automatic' },
+      { id:'bm2',...S.DE, price:38600, year:2024, mileage:300,   condition:'New',  location:'München', ext_color:'White', transmission:'Automatic' },
+      { id:'bm3',...S.DE, price:34500, year:2023, mileage:14000, condition:'Used', location:'Frankfurt', ext_color:'Grey', transmission:'Automatic' },
+      { id:'bm4',...S.PL, price:32000, year:2022, mileage:28000, condition:'Used', location:'Poznań', ext_color:'Blue', transmission:'Automatic' },
+    ]},
+];
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+const clamp = (v, mn, mx) => Math.max(mn, Math.min(mx, Math.round(v * 10) / 10));
+const fmt = n => n.toLocaleString('de-DE');
+const scoreColor = s => s >= 8.5 ? 'var(--green)' : s >= 7.0 ? 'var(--yellow)' : 'var(--red)';
+
+function modelWeightedScore(car, weights) {
+  const totalW = Object.values(weights).reduce((a, b) => a + b, 0);
+  if (!totalW) return 0;
+  const sum = CRITERIA.reduce((acc, c) => acc + (car.scores[c.key] || 0) * (weights[c.key] || 0), 0);
+  return Math.round((sum / totalW) * 10) / 10;
+}
+
+// Year + mileage adjusted scores per listing
+function listingScores(car, listing) {
+  const age = 2025 - listing.year;
+  const km = listing.mileage / 10000;
+  const isEV = ['Electric', 'PHEV'].includes(car.fuel);
+  const s = car.scores;
+  return {
+    range:        clamp(s.range        - (isEV ? age*0.14 + km*0.02 : age*0.04),  1, 10),
+    safety:       clamp(s.safety       - age * 0.18,                               1, 10),
+    practicality: clamp(s.practicality - age*0.04 - km*0.01,                       1, 10),
+    tech:         clamp(s.tech         - age * 0.28,                               1, 10),
+    reliability:  clamp(s.reliability  - km * 0.04,                                1, 10),
+    value:        clamp(s.value        + age*0.22 - km*0.02,                       1, 10),
+    charging:     isEV ? clamp(s.charging - age*0.18, 1, 10) : s.charging,
+  };
+}
+
+function listingWeightedScore(car, listing, weights) {
+  const totalW = Object.values(weights).reduce((a, b) => a + b, 0);
+  if (!totalW) return 0;
+  const sc = listingScores(car, listing);
+  const sum = CRITERIA.reduce((acc, c) => acc + (sc[c.key] || 0) * (weights[c.key] || 0), 0);
+  return Math.round((sum / totalW) * 10) / 10;
+}
+
+function bestListing(car) {
+  if (!car?.listings?.length) return { price: 0, name: '', flag: '' };
+  return [...car.listings].sort((a, b) => a.price - b.price)[0];
+}
+
+// ─── Wikipedia image hook ─────────────────────────────────────────────────────
+const _wikiCache = {};
+function useWikiImage(query) {
+  const [url, setUrl] = useState(_wikiCache[query] || null);
+  useEffect(() => {
+    if (!query) return;
+    if (_wikiCache[query] !== undefined) { setUrl(_wikiCache[query] || null); return; }
+    _wikiCache[query] = null; // mark as in-flight
+    fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(query)}&prop=pageimages&format=json&pithumbsize=500&origin=*`)
+      .then(r => r.json())
+      .then(data => {
+        const pages = data?.query?.pages || {};
+        const page = pages[Object.keys(pages)[0]];
+        const src = page?.thumbnail?.source || false;
+        _wikiCache[query] = src;
+        if (src) setUrl(src);
+      })
+      .catch(() => { _wikiCache[query] = false; });
+  }, [query]);
+  return url;
+}
+
+// ─── CarImage ─────────────────────────────────────────────────────────────────
+function CarImage({ car, w, h, style = {} }) {
+  const url = useWikiImage(car.wikiQuery);
+  const [failed, setFailed] = useState(false);
+  if (url && !failed) {
+    return (
+      <div style={{ width: w, height: h, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--border)', background: '#f0ede9', ...style }}>
+        <img src={url} alt={`${car.brand} ${car.name}`}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={() => setFailed(true)} />
+      </div>
+    );
+  }
+  return (
+    <div style={{ width: w, height: h, borderRadius: 8, flexShrink: 0, border: '1px solid var(--border)', background: '#f0ede9',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', ...style }}>
+      <svg width={w * 0.65} height={h * 0.55} viewBox="0 0 100 55" fill="none">
+        <rect x="5" y="25" width="90" height="22" rx="4" fill={car.color} opacity="0.15" />
+        <rect x="18" y="10" width="64" height="20" rx="6" fill={car.color} opacity="0.22" />
+        <circle cx="22" cy="47" r="8" fill={car.color} opacity="0.28" /><circle cx="22" cy="47" r="4" fill={car.color} opacity="0.45" />
+        <circle cx="78" cy="47" r="8" fill={car.color} opacity="0.28" /><circle cx="78" cy="47" r="4" fill={car.color} opacity="0.45" />
+      </svg>
+      <span style={{ fontSize: 9, color: '#bbb', marginTop: 3, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: 1 }}>{car.brand}</span>
+    </div>
+  );
+}
+
+// ─── ScoreBadge ───────────────────────────────────────────────────────────────
+function ScoreBadge({ score, size = 56 }) {
+  const col = scoreColor(score);
+  const r = size / 2 - 4;
+  const circ = 2 * Math.PI * r;
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col + '22'} strokeWidth={size < 44 ? 3 : 4} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col} strokeWidth={size < 44 ? 3 : 4}
+          strokeDasharray={`${(score / 10) * circ} ${circ}`} strokeLinecap="round" />
+      </svg>
+      <span style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
+        fontSize: size < 44 ? 10 : size < 60 ? 13 : 15, fontWeight: 700, color: col }}>
+        {score.toFixed(1)}
+      </span>
+    </div>
+  );
+}
+
+// ─── Body type SVGs ───────────────────────────────────────────────────────────
+const BODY_SVGS = {
+  Hatchback: c => (
+    <svg width="84" height="46" viewBox="0 0 84 46" fill="none">
+      <path d="M6 38V27L18 11H58L70 25V38Z" fill={c+'18'} stroke={c} strokeWidth="1.7" strokeLinejoin="round"/>
+      <path d="M18 11L22 27" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <path d="M58 11L64 25" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <line x1="22" y1="27" x2="64" y2="27" stroke={c} strokeWidth="1" opacity="0.3"/>
+      <circle cx="23" cy="38" r="6.5" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="56" cy="38" r="6.5" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="23" cy="38" r="2.5" fill={c} opacity="0.3"/>
+      <circle cx="56" cy="38" r="2.5" fill={c} opacity="0.3"/>
+    </svg>
+  ),
+  Sedan: c => (
+    <svg width="84" height="46" viewBox="0 0 84 46" fill="none">
+      <path d="M4 38V27L15 11H57L66 20L76 24V38Z" fill={c+'18'} stroke={c} strokeWidth="1.7" strokeLinejoin="round"/>
+      <path d="M15 11L19 27" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <path d="M57 11L63 20" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <line x1="63" y1="20" x2="76" y2="24" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.35"/>
+      <line x1="19" y1="27" x2="67" y2="27" stroke={c} strokeWidth="1" opacity="0.3"/>
+      <circle cx="21" cy="38" r="6.5" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="61" cy="38" r="6.5" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="21" cy="38" r="2.5" fill={c} opacity="0.3"/>
+      <circle cx="61" cy="38" r="2.5" fill={c} opacity="0.3"/>
+    </svg>
+  ),
+  SUV: c => (
+    <svg width="84" height="46" viewBox="0 0 84 46" fill="none">
+      <path d="M5 38V22L14 9H69L77 22V38Z" fill={c+'18'} stroke={c} strokeWidth="1.7" strokeLinejoin="round"/>
+      <path d="M14 9L17 26" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <path d="M69 9L73 22" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <line x1="17" y1="26" x2="71" y2="26" stroke={c} strokeWidth="1" opacity="0.3"/>
+      <line x1="16" y1="9" x2="68" y2="9" stroke={c} strokeWidth="1.5" strokeLinecap="round" opacity="0.35"/>
+      <circle cx="22" cy="38" r="7.5" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="62" cy="38" r="7.5" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="22" cy="38" r="3" fill={c} opacity="0.25"/>
+      <circle cx="62" cy="38" r="3" fill={c} opacity="0.25"/>
+    </svg>
+  ),
+  Crossover: c => (
+    <svg width="84" height="46" viewBox="0 0 84 46" fill="none">
+      <path d="M5 38V24L17 10H62L72 22V38Z" fill={c+'18'} stroke={c} strokeWidth="1.7" strokeLinejoin="round"/>
+      <path d="M17 10L21 26" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <path d="M62 10L68 22" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <line x1="21" y1="26" x2="68" y2="26" stroke={c} strokeWidth="1" opacity="0.3"/>
+      <circle cx="23" cy="38" r="7" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="59" cy="38" r="7" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="23" cy="38" r="2.8" fill={c} opacity="0.25"/>
+      <circle cx="59" cy="38" r="2.8" fill={c} opacity="0.25"/>
+    </svg>
+  ),
+  Estate: c => (
+    <svg width="84" height="46" viewBox="0 0 84 46" fill="none">
+      <path d="M4 38V26L14 10H68L76 24V38Z" fill={c+'18'} stroke={c} strokeWidth="1.7" strokeLinejoin="round"/>
+      <path d="M14 10L18 27" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <path d="M68 10L72 26" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.45"/>
+      <line x1="18" y1="27" x2="72" y2="27" stroke={c} strokeWidth="1" opacity="0.3"/>
+      <line x1="18" y1="10" x2="66" y2="10" stroke={c} strokeWidth="1.3" strokeLinecap="round" opacity="0.3"/>
+      <circle cx="21" cy="38" r="6.5" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="61" cy="38" r="6.5" fill="white" stroke={c} strokeWidth="1.7"/>
+      <circle cx="21" cy="38" r="2.5" fill={c} opacity="0.3"/>
+      <circle cx="61" cy="38" r="2.5" fill={c} opacity="0.3"/>
+    </svg>
+  ),
+};
+
+// ─── Fuel icons ───────────────────────────────────────────────────────────────
+// Electric: lightning bolt | Hybrid: leaf | PHEV: plug+drop combo | Petrol: nozzle | Diesel: barrel drum
+const FUEL_ICONS = {
+  Electric: c => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M10 1.5L4.5 9H9L6 14.5L11.5 7H7L10 1.5Z" fill={c}/>
+    </svg>
+  ),
+  Hybrid: c => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 2C8 2 13.5 5 13.5 9.5C13.5 12.5 11 14.5 8 14.5C5 14.5 2.5 12.5 2.5 9.5C2.5 6 5 3 8 2Z" fill={c} opacity="0.8"/>
+      <path d="M8 13.5C8 13.5 7.5 9 11 5" stroke="white" strokeWidth="1.1" strokeLinecap="round" opacity="0.75"/>
+    </svg>
+  ),
+  PHEV: c => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M5.5 2.5C5.5 2.5 3 6.5 3 9C3 11 4 13 6 13C6 13 5.5 2.5 5.5 2.5Z" fill={c} opacity="0.7"/>
+      <rect x="8" y="6" width="5.5" height="4.5" rx="1.2" stroke={c} strokeWidth="1.4"/>
+      <line x1="9.5" y1="4.5" x2="9.5" y2="6" stroke={c} strokeWidth="1.4" strokeLinecap="round"/>
+      <line x1="12" y1="4.5" x2="12" y2="6" stroke={c} strokeWidth="1.4" strokeLinecap="round"/>
+      <path d="M13.5 8.25H14.5" stroke={c} strokeWidth="1.4" strokeLinecap="round"/>
+      <line x1="7" y1="3" x2="7" y2="13" stroke={c} strokeWidth="0.7" opacity="0.3" strokeDasharray="1.5 1.5"/>
+    </svg>
+  ),
+  Petrol: c => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="4" width="7.5" height="10" rx="1.5" stroke={c} strokeWidth="1.5"/>
+      <path d="M9.5 7C11 7 12 6.5 12.5 5.5" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M12.5 5.5L13.5 6.5L13.5 10.5" stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="4" y1="8" x2="8" y2="8" stroke={c} strokeWidth="1.2" strokeLinecap="round" opacity="0.5"/>
+    </svg>
+  ),
+  Diesel: c => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="3" width="8" height="11" rx="2" stroke={c} strokeWidth="1.5"/>
+      <ellipse cx="6" cy="3" rx="3" ry="1.2" stroke={c} strokeWidth="1.3"/>
+      <ellipse cx="6" cy="14" rx="3" ry="1.2" stroke={c} strokeWidth="1.3"/>
+      <path d="M10 8C11.5 8 12.5 7.5 13 7L14 8.5L14 11" stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+};
+
+// ─── Chips ────────────────────────────────────────────────────────────────────
+function BodyChip({ type, active, onClick }) {
+  const Svg = BODY_SVGS[type];
+  const c = active ? '#fff' : 'var(--mid)';
+  return (
+    <button onClick={onClick} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5,
+      padding:'10px 12px', borderRadius:12, cursor:'pointer', minWidth:90,
+      background: active ? 'var(--dark)' : 'var(--surface)',
+      border:`1.5px solid ${active ? 'var(--dark)' : 'var(--border)'}`, transition:'all .15s' }}>
+      {Svg ? Svg(c) : <div style={{ width:80, height:44, background:'var(--border)', borderRadius:4 }}/>}
+      <span style={{ fontSize:11, fontWeight:600, color:c }}>{type}</span>
+    </button>
+  );
+}
+
+function FuelChip({ fuel, active, onClick }) {
+  const Icon = FUEL_ICONS[fuel];
+  const c = active ? '#fff' : 'var(--mid)';
+  return (
+    <button onClick={onClick} style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 14px',
+      borderRadius:999, background: active ? 'var(--dark)' : 'var(--surface)',
+      color:c, border:`1.5px solid ${active ? 'var(--dark)' : 'var(--border)'}`, transition:'all .15s', cursor:'pointer' }}>
+      {Icon && Icon(c)}
+      <span style={{ fontSize:13, fontWeight:600 }}>{fuel}</span>
+    </button>
+  );
+}
+
+function PlatformChip({ platform, active, onClick }) {
+  return (
+    <button onClick={onClick} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px',
+      borderRadius:999, background: active ? 'var(--dark)' : 'var(--surface)',
+      border:`1.5px solid ${active ? 'var(--dark)' : 'var(--border)'}`, transition:'all .15s', cursor:'pointer' }}>
+      <span style={{ fontSize:14 }}>{platform.flag}</span>
+      <span style={{ fontSize:12, fontWeight:600, color: active ? '#fff' : 'var(--mid)' }}>{platform.label}</span>
+    </button>
+  );
+}
+
+// ─── BudgetRange — dual thumb slider ─────────────────────────────────────────
+const BUDGET_MIN = 0;
+const BUDGET_MAX = 80000;
+const BUDGET_STEP = 2500;
+
+function BudgetRange({ min, max, onChange }) {
+  const pct = v => ((v - BUDGET_MIN) / (BUDGET_MAX - BUDGET_MIN)) * 100;
+  const leftPct  = pct(min);
+  const rightPct = pct(max);
+
+  const PRESETS = [
+    { label:'Any',        mn:0,     mx:80000 },
+    { label:'Under €25k', mn:0,     mx:25000 },
+    { label:'€25–40k',    mn:25000, mx:40000 },
+    { label:'€40–60k',    mn:40000, mx:60000 },
+    { label:'€60k+',      mn:60000, mx:80000 },
+  ];
+  const activePreset = PRESETS.find(p => p.mn === min && p.mx === max);
+
+  return (
+    <div>
+      <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
+        {PRESETS.map(p => (
+          <button key={p.label} onClick={() => onChange(p.mn, p.mx)} style={{
+            padding:'5px 12px', borderRadius:999, fontSize:12, fontWeight:600, cursor:'pointer',
+            background: activePreset?.label===p.label ? 'var(--dark)' : 'var(--surface)',
+            color: activePreset?.label===p.label ? '#fff' : 'var(--mid)',
+            border:`1.5px solid ${activePreset?.label===p.label ? 'var(--dark)' : 'var(--border)'}`,
+            transition:'all .15s' }}>{p.label}</button>
+        ))}
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}>
+        <span style={{ fontWeight:700, color:'var(--dark)' }}>{min === 0 ? 'Any' : `€${fmt(min)}`}</span>
+        <span style={{ color:'var(--mid)', fontSize:12, fontWeight:500 }}>to</span>
+        <span style={{ fontWeight:700, color:'var(--dark)' }}>{max >= BUDGET_MAX ? '€80,000+' : `€${fmt(max)}`}</span>
+      </div>
+      <div className="dual-range">
+        <div style={{ position:'absolute', left:0, right:0, height:4, borderRadius:2, background:'var(--border)' }}/>
+        <div style={{ position:'absolute', left:`${leftPct}%`, width:`${rightPct - leftPct}%`,
+          height:4, borderRadius:2, background:'var(--dark)' }}/>
+        <input type="range" min={BUDGET_MIN} max={BUDGET_MAX} step={BUDGET_STEP} value={min}
+          onChange={e => { const v = +e.target.value; if (v < max - BUDGET_STEP) onChange(v, max); }}/>
+        <input type="range" min={BUDGET_MIN} max={BUDGET_MAX} step={BUDGET_STEP} value={max}
+          onChange={e => { const v = +e.target.value; if (v > min + BUDGET_STEP) onChange(min, v); }}/>
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--mid)', marginTop:4, letterSpacing:0.2 }}>
+        <span>€0</span><span>€20k</span><span>€40k</span><span>€60k</span><span>€80k+</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── HomeScreen ───────────────────────────────────────────────────────────────
+
+// Collapsible filter group
+function FilterGroup({ label, count, icon, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderRadius:12, border:'1.5px solid var(--border)', overflow:'hidden', background:'var(--surface)' }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+        padding:'14px 18px', cursor:'pointer', background:'none' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontSize:18 }}>{icon}</span>
+          <span style={{ fontSize:14, fontWeight:700 }}>{label}</span>
+          {count > 0 && (
+            <span style={{ fontSize:11, fontWeight:700, background:'var(--warm)', color:'#fff',
+              padding:'2px 8px', borderRadius:999 }}>{count} selected</span>
+          )}
+        </div>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+          style={{ transform: open ? 'rotate(180deg)' : 'none', transition:'transform .2s', flexShrink:0 }}>
+          <path d="M4 6l4 4 4-4" stroke="var(--mid)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div style={{ padding:'0 18px 18px', borderTop:'1px solid var(--border)' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HomeScreen({ onStart, filters, setFilters }) {
+  const toggleArr = (key, val) => setFilters(f => {
+    const arr = f[key] || [];
+    return { ...f, [key]: arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val] };
+  });
+
+  const COUNTRIES = [
+    {code:'DE',flag:'🇩🇪',name:'Germany'},
+    {code:'FR',flag:'🇫🇷',name:'France'},
+    {code:'NL',flag:'🇳🇱',name:'Netherlands'},
+    {code:'PL',flag:'🇵🇱',name:'Poland'},
+    {code:'ES',flag:'🇪🇸',name:'Spain'},
+    {code:'IT',flag:'🇮🇹',name:'Italy'},
+    {code:'BE',flag:'🇧🇪',name:'Belgium'},
+    {code:'AT',flag:'🇦🇹',name:'Austria'},
+    {code:'SE',flag:'🇸🇪',name:'Sweden'},
+    {code:'CZ',flag:'🇨🇿',name:'Czech Rep.'},
+    {code:'PT',flag:'🇵🇹',name:'Portugal'},
+    {code:'CH',flag:'🇨🇭',name:'Switzerland'},
+  ];
+
+  const fuelCount = filters.fuel.length;
+  const typeCount = filters.type.length;
+  const platformCount = filters.platforms.length;
+  const countryCount = (filters.countries||[]).length;
+  const hasBudget = filters.budgetMin > 0 || filters.budgetMax < 80000;
+  const hasRange = (filters.minRange||0) > 0;
+  const hasSeats = filters.seats > 0;
+  const hasBoot = (filters.minBoot||0) > 0 || (filters.maxBoot||1200) < 1200;
+  const transCount = (filters.transmission||[]).length;
+  const colorCount = (filters.colors||[]).length;
+  const activeFilterCount = (fuelCount>0?1:0)+(typeCount>0?1:0)+(platformCount>0?1:0)+(countryCount>0?1:0)+(hasBudget?1:0)+(hasRange?1:0)+(hasSeats?1:0)+(transCount>0?1:0)+(colorCount>0?1:0)+(hasBoot?1:0);
+
+  const BOOT_MAX = 1200;
+
+  return (
+    <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', background:'var(--bg)' }}>
+
+      {/* ── Hero ── */}
+      <div style={{ background:'var(--dark)', color:'#fff', padding:'52px 32px 60px', position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at 75% 40%, var(--accent), transparent 55%)', opacity:0.15 }}/>
+        <div style={{ maxWidth:860, margin:'0 auto', position:'relative' }}>
+          {/* Logo */}
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:36 }}>
+            <div style={{ width:34, height:34, background:'var(--accent)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 13L6 6L9 9.5L12 4L15 8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <span style={{ fontWeight:700, fontSize:18, letterSpacing:'-0.3px' }}>RankAutos</span>
+            <span style={{ fontSize:10, background:'rgba(255,255,255,0.1)', padding:'2px 8px', borderRadius:999, color:'rgba(255,255,255,0.5)' }}>Pan-European</span>
+          </div>
+
+          {/* Tagline */}
+          <div style={{ fontSize:12, fontWeight:600, textTransform:'uppercase', letterSpacing:2, color:'var(--accent)', marginBottom:12 }}>
+            One search. Every platform. Best price.
+          </div>
+          <h1 style={{ fontSize:'clamp(26px,5vw,50px)', fontWeight:700, letterSpacing:'-1.5px', lineHeight:1.05, maxWidth:580, textWrap:'pretty' }}>
+            See all car ads in one place —<br/><span style={{ color:'var(--accent)' }}>ranked to find your dream car.</span>
+          </h1>
+          <p style={{ marginTop:16, fontSize:15, color:'rgba(255,255,255,0.45)', maxWidth:460, lineHeight:1.7, textWrap:'pretty' }}>
+            We scan AutoScout24, mobile.de, and 8 other EU platforms daily, score every listing across 7 criteria, and rank them by what matters to you.
+          </p>
+
+
+
+          {/* Stats */}
+          <div style={{ display:'flex', gap:28, marginTop:28, flexWrap:'wrap' }}>
+            {[['17','models'],['7','criteria'],['10','EU platforms'],['Daily','refresh']].map(([n,l]) => (
+              <div key={l}><div style={{ fontSize:20, fontWeight:700, color:'var(--accent)' }}>{n}</div><div style={{ fontSize:10, color:'rgba(255,255,255,0.35)', textTransform:'uppercase', letterSpacing:1 }}>{l}</div></div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Steps infographic ── */}
+      <div style={{ background:'var(--surface)', borderBottom:'1px solid var(--border)' }}>
+        <div style={{ maxWidth:860, margin:'0 auto', padding:'40px 32px' }}>
+          <div style={{ textAlign:'center', marginBottom:32 }}>
+            <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:2, color:'var(--mid)' }}>How to use RankAutos</div>
+          </div>
+          <div style={{ display:'flex', alignItems:'flex-start' }}>
+            {[
+              {
+                n:'1', title:'Set your filters', desc:'Choose fuel type, body style, budget, and more',
+                icon:(
+                  <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                    <rect x="1" y="1" width="50" height="50" rx="14" fill="var(--bg)" stroke="var(--border)" strokeWidth="1.5"/>
+                    <path d="M14 19h24M18 26h16M22 33h8" stroke="var(--dark)" strokeWidth="1.8" strokeLinecap="round"/>
+                    <circle cx="19" cy="19" r="3.5" fill="var(--surface)" stroke="var(--dark)" strokeWidth="1.5"/>
+                    <circle cx="33" cy="26" r="3.5" fill="var(--surface)" stroke="var(--dark)" strokeWidth="1.5"/>
+                    <circle cx="26" cy="33" r="3.5" fill="var(--surface)" stroke="var(--dark)" strokeWidth="1.5"/>
+                  </svg>
+                )
+              },
+              {
+                n:'2', title:'See the rankings', desc:'Every car scored 1–10 by your priorities, ranked best-first',
+                icon:(
+                  <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                    <rect x="1" y="1" width="50" height="50" rx="14" fill="var(--bg)" stroke="var(--border)" strokeWidth="1.5"/>
+                    <rect x="13" y="32" width="7" height="9" rx="2" fill="var(--dark)" opacity="0.28"/>
+                    <rect x="22.5" y="25" width="7" height="16" rx="2" fill="var(--dark)" opacity="0.55"/>
+                    <rect x="32" y="16" width="7" height="25" rx="2" fill="var(--dark)"/>
+                    <path d="M14 27l9.5-7 9 4 7-10" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )
+              },
+              {
+                n:'3', title:'Open the best ad', desc:'One click takes you to the listing on the original platform',
+                icon:(
+                  <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                    <rect x="1" y="1" width="50" height="50" rx="14" fill="var(--bg)" stroke="var(--border)" strokeWidth="1.5"/>
+                    <rect x="13" y="17" width="18" height="16" rx="3.5" stroke="var(--dark)" strokeWidth="1.5" fill="none"/>
+                    <path d="M24 17v-3.5M24 13.5h14v14M38 13.5L27 24.5" stroke="var(--dark)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )
+              }
+            ].map((s,i) => (
+              <React.Fragment key={s.n}>
+                <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', gap:14 }}>
+                  <div style={{ position:'relative' }}>
+                    {s.icon}
+                    <div style={{ position:'absolute', top:-7, right:-7, width:22, height:22, borderRadius:'50%',
+                      background:'var(--dark)', color:'#fff', fontSize:11, fontWeight:800,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      boxShadow:'0 2px 6px rgba(0,0,0,0.18)' }}>{s.n}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:700, marginBottom:5 }}>{s.title}</div>
+                    <div style={{ fontSize:12, color:'var(--mid)', lineHeight:1.6, maxWidth:180, margin:'0 auto' }}>{s.desc}</div>
+                  </div>
+                </div>
+                {i < 2 && (
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', paddingBottom:52, flexShrink:0, width:52 }}>
+                    <svg width="32" height="14" viewBox="0 0 32 14" fill="none">
+                      <path d="M2 7h22" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <path d="M20 3l6 4-6 4" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Filters ── */}
+      <div style={{ flex:1, maxWidth:860, margin:'0 auto', padding:'32px 32px 60px', width:'100%' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <div>
+            <div style={{ fontSize:16, fontWeight:700 }}>Step 1 — Set your filters</div>
+            <div style={{ fontSize:12, color:'var(--mid)', marginTop:2 }}>All filters are optional — skip any to see all options</div>
+          </div>
+          {activeFilterCount > 0 && (
+            <button onClick={() => setFilters({ fuel:[], type:[], budgetMin:0, budgetMax:80000, seats:0, platforms:[], countries:[], minRange:0, transmission:[], colors:[], minBoot:0, maxBoot:1200 })}
+              style={{ fontSize:12, color:'var(--mid)', cursor:'pointer', padding:'5px 12px', border:'1px solid var(--border)', borderRadius:8 }}>
+              Clear all ({activeFilterCount})
+            </button>
+          )}
+        </div>
+
+        <div style={{ display:'grid', gap:10 }}>
+
+          {/* Fuel */}
+          <FilterGroup label="Fuel Type" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--dark)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="8" height="12" rx="1.5"/><path d="M11 7h2a1 1 0 011 1v3c0 1 .67 1.5 1.5 1.5"/><line x1="3" y1="9" x2="11" y2="9"/></svg>} count={fuelCount}>
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap', paddingTop:14 }}>
+              {['Electric','Hybrid','Petrol','Diesel'].map(f => (
+                <FuelChip key={f} fuel={f} active={filters.fuel.includes(f)} onClick={() => toggleArr('fuel', f)}/>
+              ))}
+            </div>
+          </FilterGroup>
+
+          {/* Transmission */}
+          <FilterGroup label="Transmission" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--dark)" strokeWidth="1.5" strokeLinecap="round"><circle cx="4" cy="4" r="2"/><circle cx="14" cy="4" r="2"/><circle cx="4" cy="14" r="2"/><circle cx="9" cy="9" r="2"/><line x1="4" y1="6" x2="4" y2="12"/><line x1="6" y1="4" x2="12" y2="4"/><line x1="6" y1="14" x2="9" y2="11"/></svg>} count={(filters.transmission||[]).length}>
+            <div style={{ display:'flex', gap:8, paddingTop:14 }}>
+              {['Automatic','Manual'].map(t => (
+                <button key={t} onClick={() => toggleArr('transmission', t)} style={{
+                  display:'flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:999, cursor:'pointer', fontSize:13, fontWeight:600,
+                  background: (filters.transmission||[]).includes(t) ? 'var(--dark)' : 'var(--surface)',
+                  color: (filters.transmission||[]).includes(t) ? '#fff' : 'var(--mid)',
+                  border:`1.5px solid ${(filters.transmission||[]).includes(t) ? 'var(--dark)' : 'var(--border)'}`,
+                  transition:'all .15s' }}>
+                  {t === 'Automatic' ? (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <rect x="1" y="6" width="14" height="4" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none"/>
+                      <circle cx="3.5" cy="8" r="1" fill="currentColor" opacity="0.3"/>
+                      <circle cx="6.5" cy="8" r="1" fill="currentColor" opacity="0.3"/>
+                      <circle cx="9.5" cy="8" r="1" fill="currentColor" opacity="0.3"/>
+                      <circle cx="12.5" cy="8" r="1.6" fill="currentColor"/>
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <line x1="4" y1="2" x2="4" y2="14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                      <line x1="12" y1="2" x2="12" y2="14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                      <line x1="4" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                      <circle cx="4" cy="3.5" r="2" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+                      <circle cx="12" cy="12.5" r="2" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+                    </svg>
+                  )}
+                  {t}
+                </button>
+              ))}
+            </div>
+          </FilterGroup>
+
+          {/* Body type */}
+          <FilterGroup label="Body Type" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--dark)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12V9.5L4.5 6h9L16 9.5V12H2z"/><circle cx="5.5" cy="13.5" r="1.5"/><circle cx="12.5" cy="13.5" r="1.5"/></svg>} count={typeCount}>
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap', paddingTop:14 }}>
+              {['SUV','Crossover','Hatchback','Sedan','Estate'].map(t => (
+                <BodyChip key={t} type={t} active={filters.type.includes(t)} onClick={() => toggleArr('type', t)}/>
+              ))}
+            </div>
+          </FilterGroup>
+
+          {/* Budget */}
+          <FilterGroup label="Budget Range" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--dark)" strokeWidth="1.5" strokeLinecap="round"><circle cx="9" cy="9" r="7"/><path d="M11 6.5a3.5 3.5 0 100 5"/><line x1="6.5" y1="8" x2="11" y2="8"/><line x1="6.5" y1="10" x2="11" y2="10"/></svg>} count={hasBudget?1:0}>
+            <div style={{ paddingTop:14 }}>
+              <BudgetRange min={filters.budgetMin} max={filters.budgetMax}
+                onChange={(mn,mx) => setFilters(f => ({...f, budgetMin:mn, budgetMax:mx}))}/>
+            </div>
+          </FilterGroup>
+
+          {/* Country */}
+          <FilterGroup label="Country / Market" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--dark)" strokeWidth="1.4" strokeLinecap="round"><circle cx="9" cy="9" r="7"/><path d="M9 2c0 0-3 3-3 7s3 7 3 7M9 2c0 0 3 3 3 7s-3 7-3 7"/><line x1="2" y1="9" x2="16" y2="9"/></svg>} count={countryCount}>
+            <div style={{ paddingTop:14 }}>
+              <div style={{ fontSize:12, color:'var(--mid)', marginBottom:10 }}>Where do you want to buy?</div>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                {COUNTRIES.map(c => (
+                  <button key={c.code} onClick={() => toggleArr('countries', c.code)} style={{
+                    display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:999, cursor:'pointer', fontSize:13, fontWeight:600,
+                    background: (filters.countries||[]).includes(c.code) ? 'var(--dark)' : 'var(--surface)',
+                    color: (filters.countries||[]).includes(c.code) ? '#fff' : 'var(--mid)',
+                    border:`1.5px solid ${(filters.countries||[]).includes(c.code) ? 'var(--dark)' : 'var(--border)'}`,
+                    transition:'all .15s' }}>
+                    <span style={{ fontSize:16 }}>{c.flag}</span>{c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </FilterGroup>
+
+          {/* Platforms */}
+          <FilterGroup label="Platforms to Scan" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--dark)" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="5"/><line x1="12" y1="12" x2="16" y2="16"/></svg>} count={platformCount}>
+            <div style={{ paddingTop:14 }}>
+              <div style={{ fontSize:12, color:'var(--mid)', marginBottom:10 }}>All platforms scanned by default</div>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                {PLATFORMS.map(p => (
+                  <PlatformChip key={p.id} platform={p}
+                    active={filters.platforms.length === 0 || filters.platforms.includes(p.id)}
+                    onClick={() => {
+                      setFilters(f => {
+                        const isAll = f.platforms.length === 0;
+                        if (isAll) return { ...f, platforms: PLATFORMS.filter(x => x.id !== p.id).map(x => x.id) };
+                        const next = f.platforms.includes(p.id) ? f.platforms.filter(x => x !== p.id) : [...f.platforms, p.id];
+                        return { ...f, platforms: next.length === PLATFORMS.length ? [] : next };
+                      });
+                    }}/>
+                ))}
+                {filters.platforms.length > 0 && (
+                  <button onClick={() => setFilters(f => ({...f, platforms:[]}))}
+                    style={{ padding:'6px 12px', borderRadius:999, fontSize:12, color:'var(--mid)', border:'1px dashed var(--border)', cursor:'pointer' }}>
+                    Select all
+                  </button>
+                )}
+              </div>
+            </div>
+          </FilterGroup>
+
+          {/* Driving range */}
+          <FilterGroup label="Minimum Driving Range" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--dark)" strokeWidth="1.5" strokeLinecap="round"><path d="M3 14a6 6 0 1112 0"/><line x1="9" y1="8" x2="7" y2="12"/><circle cx="9" cy="8.5" r="1" fill="var(--dark)" stroke="none"/></svg>} count={hasRange?1:0}>
+            <div style={{ paddingTop:14 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
+                <span style={{ fontSize:12, color:'var(--mid)' }}>Minimum range</span>
+                <span style={{ fontSize:14, fontWeight:700 }}>{(filters.minRange||0) === 0 ? 'Any' : `${filters.minRange} km+`}</span>
+              </div>
+              <input type="range" min="0" max="700" step="50" value={filters.minRange||0}
+                onChange={e => setFilters(f => ({...f, minRange:+e.target.value}))}/>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'var(--mid)', marginTop:4 }}>
+                <span>Any</span><span>200 km</span><span>400 km</span><span>600 km</span><span>700 km+</span>
+              </div>
+            </div>
+          </FilterGroup>
+
+          {/* Car Color */}
+          <FilterGroup label="Exterior Colour" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="6" cy="6" r="2.5" stroke="var(--dark)" strokeWidth="1.4"/><circle cx="12" cy="6" r="2.5" stroke="var(--dark)" strokeWidth="1.4"/><circle cx="9" cy="12" r="2.5" stroke="var(--dark)" strokeWidth="1.4"/></svg>} count={(filters.colors||[]).length}>
+            <div style={{ paddingTop:14 }}>
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                {[
+                  { name:'White',  hex:'#f5f5f5', border:'#ccc' },
+                  { name:'Black',  hex:'#1a1a1a', border:'#1a1a1a' },
+                  { name:'Silver', hex:'#c0c0c0', border:'#aaa' },
+                  { name:'Grey',   hex:'#808080', border:'#666' },
+                  { name:'Blue',   hex:'#2155a3', border:'#1a4080' },
+                  { name:'Red',    hex:'#cc2200', border:'#aa1100' },
+                  { name:'Green',  hex:'#2e7d32', border:'#1b5e20' },
+                  { name:'Brown',  hex:'#795548', border:'#5d4037' },
+                ].map(c => {
+                  const active = (filters.colors||[]).includes(c.name);
+                  return (
+                    <button key={c.name} onClick={() => toggleArr('colors', c.name)} style={{
+                      display:'flex', flexDirection:'column', alignItems:'center', gap:6,
+                      padding:'8px 12px', borderRadius:10, cursor:'pointer',
+                      background: active ? 'var(--dark)' : 'var(--surface)',
+                      border:`2px solid ${active ? 'var(--dark)' : 'var(--border)'}`,
+                      transition:'all .15s' }}>
+                      <div style={{ width:32, height:32, borderRadius:'50%', background:c.hex,
+                        border:`2px solid ${c.border}`, boxShadow: active ? '0 0 0 2px var(--accent)' : 'none' }}/>
+                      <span style={{ fontSize:11, fontWeight:600, color: active?'#fff':'var(--mid)' }}>{c.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </FilterGroup>
+
+          {/* Seats */}
+          <FilterGroup label="Minimum Seats" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--dark)" strokeWidth="1.5" strokeLinecap="round"><circle cx="9" cy="5" r="2.5"/><path d="M4.5 16c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5"/></svg>} count={hasSeats?1:0}>
+            <div style={{ display:'flex', gap:8, paddingTop:14 }}>
+              {[0,2,4,5,7].map(s => (
+                <button key={s} onClick={() => setFilters(f => ({...f, seats:s}))} style={{
+                  padding:'7px 16px', borderRadius:999, fontSize:13, fontWeight:600, cursor:'pointer',
+                  background: filters.seats===s ? 'var(--dark)' : 'var(--surface)',
+                  color: filters.seats===s ? '#fff' : 'var(--mid)',
+                  border:`1.5px solid ${filters.seats===s ? 'var(--dark)' : 'var(--border)'}`, transition:'all .15s' }}>
+                  {s===0 ? 'Any' : `${s}+`}
+                </button>
+              ))}
+            </div>
+          </FilterGroup>
+
+          {/* Boot space */}
+          <FilterGroup label="Boot Space Range" icon={<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--dark)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="14" height="9" rx="2"/><path d="M5 7V5a4 4 0 018 0v2"/></svg>} count={hasBoot?1:0}>
+            <div style={{ paddingTop:14 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:13 }}>
+                <span style={{ fontWeight:700 }}>{(filters.minBoot||0) === 0 ? 'Any' : `${filters.minBoot} L`}</span>
+                <span style={{ color:'var(--mid)', fontSize:12 }}>to</span>
+                <span style={{ fontWeight:700 }}>{(filters.maxBoot||BOOT_MAX) >= BOOT_MAX ? `${BOOT_MAX} L+` : `${filters.maxBoot} L`}</span>
+              </div>
+              <div className="dual-range">
+                <div style={{ position:'absolute', left:0, right:0, height:4, borderRadius:2, background:'var(--border)' }}/>
+                <div style={{ position:'absolute',
+                  left:`${((filters.minBoot||0)/BOOT_MAX)*100}%`,
+                  width:`${(((filters.maxBoot||BOOT_MAX)-(filters.minBoot||0))/BOOT_MAX)*100}%`,
+                  height:4, borderRadius:2, background:'var(--dark)' }}/>
+                <input type="range" min="0" max={BOOT_MAX} step="50" value={filters.minBoot||0}
+                  onChange={e => { const v=+e.target.value; if(v<(filters.maxBoot||BOOT_MAX)-50) setFilters(f=>({...f,minBoot:v})); }}/>
+                <input type="range" min="0" max={BOOT_MAX} step="50" value={filters.maxBoot||BOOT_MAX}
+                  onChange={e => { const v=+e.target.value; if(v>(filters.minBoot||0)+50) setFilters(f=>({...f,maxBoot:v})); }}/>
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'var(--mid)', marginTop:4 }}>
+                <span>0</span><span>300 L</span><span>600 L</span><span>900 L</span><span>1200 L</span>
+              </div>
+            </div>
+          </FilterGroup>
+
+        </div>
+
+        {/* CTA */}
+        <div style={{ marginTop:28, display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
+          <button onClick={onStart} style={{
+            padding:'16px 36px', background:'var(--dark)', color:'#fff', borderRadius:'var(--radius)',
+            fontSize:15, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:10,
+            boxShadow:'0 4px 20px rgba(0,0,0,.2)', transition:'transform .1s, box-shadow .1s' }}
+            onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 6px 24px rgba(0,0,0,.28)'}}
+            onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,.2)'}}>
+            Step 2 — See Rankings
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          {activeFilterCount > 0 && <span style={{ fontSize:13, color:'var(--mid)' }}>{activeFilterCount} filter{activeFilterCount!==1?'s':''} active</span>}
+        </div>
+      </div>
+
+      {/* ── How it works ── */}
+      <div style={{ background:'var(--surface)', borderTop:'1px solid var(--border)' }}>
+        <div style={{ maxWidth:860, margin:'0 auto', padding:'40px 32px' }}>
+          <div style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:2, color:'var(--mid)', marginBottom:28 }}>How it works</div>
+          <div style={{ display:'flex', alignItems:'center', gap:0 }}>
+            {/* Platforms */}
+            <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0 }}>
+              {[{flag:'🇪🇺',name:'AutoScout24'},{flag:'🇩🇪',name:'mobile.de'},{flag:'🇫🇷',name:'LaCentrale'},{flag:'🇳🇱',name:'Marktplaats'},{flag:'🇵🇱',name:'Otomoto'}].map((p,i) => (
+                <div key={i} style={{ fontSize:12, fontWeight:500, color:'var(--dark)', background:'var(--bg)',
+                  padding:'5px 10px', borderRadius:7, border:'1px solid var(--border)',
+                  display:'flex', alignItems:'center', gap:7 }}>
+                  <span>{p.flag}</span><span>{p.name}</span>
+                </div>
+              ))}
+              <div style={{ fontSize:11, color:'var(--mid)', background:'var(--bg)', padding:'5px 10px', borderRadius:7,
+                border:'1px dashed var(--border)', textAlign:'center', fontStyle:'italic' }}>+ 5 more platforms</div>
+            </div>
+            {/* Connector: daily scan */}
+            <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:8, padding:'0 16px' }}>
+              <svg width="60" height="18" viewBox="0 0 60 18" fill="none">
+                <path d="M4 9 C20 3, 40 3, 56 9" stroke="var(--border)" strokeWidth="1.5" fill="none" strokeDasharray="4 3"/>
+                <path d="M51 5l5 4-5 4" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:1.5,
+                color:'var(--mid)', background:'var(--bg)', padding:'3px 9px', borderRadius:999,
+                border:'1px solid var(--border)', whiteSpace:'nowrap' }}>daily scan</span>
+            </div>
+            {/* RankAutos box */}
+            <div style={{ background:'var(--dark)', borderRadius:14, padding:'16px 18px', textAlign:'center', minWidth:112, flexShrink:0, boxShadow:'0 4px 16px rgba(9,36,119,0.15)' }}>
+              <div style={{ fontSize:13, fontWeight:800, color:'#fff' }}>RankAutos</div>
+              <div style={{ fontSize:9, color:'rgba(255,255,255,0.6)', marginTop:2, letterSpacing:0.5 }}>scores & ranks</div>
+              <div style={{ display:'flex', flexWrap:'wrap', justifyContent:'center', gap:3, marginTop:9 }}>
+                {['Range','Safety','Value','Tech','Reliability'].map(c => (
+                  <div key={c} style={{ fontSize:8, background:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.8)', padding:'2px 5px', borderRadius:4 }}>{c}</div>
+                ))}
+              </div>
+            </div>
+            {/* Connector: ranked list */}
+            <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:8, padding:'0 16px' }}>
+              <svg width="60" height="18" viewBox="0 0 60 18" fill="none">
+                <path d="M4 9 C20 3, 40 3, 56 9" stroke="var(--border)" strokeWidth="1.5" fill="none" strokeDasharray="4 3"/>
+                <path d="M51 5l5 4-5 4" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span style={{ fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:1.5,
+                color:'var(--mid)', background:'var(--bg)', padding:'3px 9px', borderRadius:999,
+                border:'1px solid var(--border)', whiteSpace:'nowrap' }}>ranked list</span>
+            </div>
+            {/* Results */}
+            <div style={{ display:'flex', flexDirection:'column', gap:5, flexShrink:0, minWidth:120 }}>
+              {[{r:'#1',n:'Ioniq 5',s:'9.2'},{r:'#2',n:'Model Y',s:'8.8'},{r:'#3',n:'Enyaq 85',s:'8.5'}].map(c => (
+                <div key={c.r} style={{ display:'flex', alignItems:'center', gap:8, background:'var(--bg)',
+                  borderRadius:8, padding:'6px 10px', border:'1px solid var(--border)' }}>
+                  <span style={{ fontSize:10, fontWeight:800, color:'var(--mid)', width:18 }}>{c.r}</span>
+                  <span style={{ fontSize:12, fontWeight:600, flex:1 }}>{c.n}</span>
+                  <span style={{ fontSize:12, fontWeight:800, color:'oklch(0.68 0.18 145)' }}>{c.s}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Disclaimer ── */}
+      <div style={{ borderTop:'1px solid var(--border)', background:'var(--surface)' }}>
+        <div style={{ maxWidth:860, margin:'0 auto', padding:'18px 32px' }}>
+          <p style={{ fontSize:11, color:'var(--mid)', lineHeight:1.75, textWrap:'pretty' }}>
+            <strong style={{ color:'var(--dark)' }}>Disclaimer:</strong> RankAutos is a car research and comparison tool only. We do not sell, trade or broker vehicles, and we are not a party to any purchase transaction. All listings are sourced from independent third-party platforms (AutoScout24, mobile.de, Otomoto, etc.). Prices, availability and listing details may change at any time without notice. RankAutos accepts no responsibility or liability for the accuracy of third-party data, or for any transaction you enter into with a seller. Always verify all details directly with the seller before making any purchase.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+// ─── WeightSlider ─────────────────────────────────────────────────────────────
+function WeightSlider({ criterion, value, onChange }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+      <div style={{ width:170, flexShrink:0 }}>
+        <div style={{ fontSize:13, fontWeight:600 }}>{criterion.label}</div>
+        <div style={{ fontSize:11, color:'var(--mid)', marginTop:1 }}>{criterion.desc}</div>
+      </div>
+      <input type="range" min="0" max="10" step="1" value={value} onChange={e => onChange(+e.target.value)} style={{ flex:1 }}/>
+      <div style={{ width:28, textAlign:'right', fontSize:14, fontWeight:700, color: value===0 ? 'var(--border)' : 'var(--accent)' }}>{value}</div>
+    </div>
+  );
+}
+
+// ─── ResultCard ───────────────────────────────────────────────────────────────
+function ResultCard({ car, rank, score, onClick, showBadges }) {
+  const [hov, setHov] = useState(false);
+  const best = bestListing(car);
+  const Icon = FUEL_ICONS[car.fuel];
+  return (
+    <div onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ background:'var(--surface)', borderRadius:'var(--radius)',
+        border:`1.5px solid ${hov ? 'var(--dark)' : 'var(--border)'}`,
+        padding:'14px 18px', display:'flex', alignItems:'center', gap:14, cursor:'pointer',
+        transition:'all .15s', transform: hov ? 'translateY(-1px)' : 'none',
+        boxShadow: hov ? 'var(--shadow-lg)' : 'var(--shadow)' }}>
+      <div style={{ width:30, flexShrink:0, textAlign:'center' }}>
+        <div style={{ fontSize: rank<=3 ? 20 : 14, fontWeight:800,
+          color: rank===1 ? 'var(--warm)' : rank===2 ? '#8899AA' : rank===3 ? '#A0714F' : 'var(--mid)' }}>#{rank}</div>
+      </div>
+      <CarImage car={car} w={100} h={62}/>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+          <span style={{ fontSize:15, fontWeight:700 }}>{car.brand} {car.name}</span>
+          {showBadges && car.badge && (
+            <span style={{ fontSize:10, fontWeight:600, background:'var(--accent-light)', color:'var(--accent)',
+              padding:'2px 7px', borderRadius:999, textTransform:'uppercase', letterSpacing:0.5 }}>{car.badge}</span>
+          )}
+        </div>
+        <div style={{ display:'flex', gap:12, marginTop:6, alignItems:'center', flexWrap:'wrap' }}>
+          {Icon && <span style={{ display:'flex', alignItems:'center', gap:4 }}>{Icon('var(--mid)')}<span style={{ fontSize:12, color:'var(--mid)' }}>{car.fuel}</span></span>}
+          <span style={{ fontSize:12, color:'var(--mid)' }}>{car.type}</span>
+          <span style={{ fontSize:12, color:'var(--mid)' }}>{car.range_km} km</span>
+        </div>
+        <div style={{ marginTop:7, display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:14, fontWeight:700 }}>from €{fmt(best.price)}</span>
+          <span style={{ fontSize:11, color:'var(--mid)', background:'var(--bg)', padding:'2px 7px', borderRadius:999, border:'1px solid var(--border)' }}>
+            {car.listings.length} listings
+          </span>
+          <span style={{ fontSize:11, color:'var(--mid)' }}>{best.flag} {best.name}</span>
+        </div>
+      </div>
+      <ScoreBadge score={score} size={56}/>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink:0, opacity: hov ? 1 : 0.2, transition:'opacity .15s' }}>
+        <path d="M5 3l4 4-4 4" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
+  );
+}
+
+// ─── PlatformModal ───────────────────────────────────────────────────────────
+function PlatformModal({ car, platform, weights, onClose }) {
+  const [page, setPage] = useState(0);
+  const [condFilter, setCondFilter] = useState('All');
+  const [maxKm, setMaxKm] = useState(200000);
+  const [minYear, setMinYear] = useState(2015);
+  const PER_PAGE = 10;
+
+  useEffect(() => {
+    const h = e => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
+  }, [onClose]);
+
+  const allListings = useMemo(() => {
+    return car.listings
+      .filter(l => l.name === platform.name)
+      .filter(l => condFilter === 'All' || l.condition === condFilter)
+      .filter(l => l.mileage <= maxKm)
+      .filter(l => l.year >= minYear)
+      .map(l => ({ ...l, lScore: listingWeightedScore(car, l, weights) }))
+      .sort((a, b) => b.lScore - a.lScore);
+  }, [car, platform, weights, condFilter, maxKm, minYear]);
+
+  const pages = Math.max(1, Math.ceil(allListings.length / PER_PAGE));
+  const visible = allListings.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+  const COLS = '1fr 52px 90px 70px 1fr 82px 44px';
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(9,36,119,0.55)',
+      display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background:'var(--surface)', borderRadius:20, width:'100%', maxWidth:820,
+        maxHeight:'90vh', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'var(--shadow-lg)' }}>
+        {/* Header */}
+        <div style={{ padding:'20px 24px 14px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+          <div>
+            <div style={{ fontSize:12, color:'var(--mid)', marginBottom:4 }}>{platform.flag} {platform.name} · {car.brand} {car.name}</div>
+            <div style={{ fontSize:18, fontWeight:700 }}>{allListings.length} listing{allListings.length !== 1 ? 's' : ''} found</div>
+          </div>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:999, background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 1l11 11M12 1L1 12" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+        {/* Filters */}
+        <div style={{ padding:'12px 24px', borderBottom:'1px solid var(--border)', display:'flex', gap:20, flexWrap:'wrap', alignItems:'center', background:'var(--bg)', flexShrink:0 }}>
+          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+            <span style={{ fontSize:11, fontWeight:600, color:'var(--mid)', textTransform:'uppercase', letterSpacing:0.5 }}>Condition:</span>
+            {['All','New','Used'].map(c => (
+              <button key={c} onClick={() => { setCondFilter(c); setPage(0); }} style={{ padding:'4px 10px', borderRadius:999, fontSize:12, fontWeight:600, cursor:'pointer',
+                background: condFilter===c ? 'var(--dark)' : 'var(--surface)', color: condFilter===c ? '#fff' : 'var(--mid)',
+                border:`1.5px solid ${condFilter===c ? 'var(--dark)' : 'var(--border)'}` }}>{c}</button>
+            ))}
+          </div>
+          <div style={{ display:'flex', gap:8, alignItems:'center', flex:1, minWidth:160 }}>
+            <span style={{ fontSize:11, fontWeight:600, color:'var(--mid)', textTransform:'uppercase', letterSpacing:0.5, whiteSpace:'nowrap' }}>Max km: <strong style={{ color:'var(--dark)' }}>{fmt(maxKm)}</strong></span>
+            <input type="range" min="0" max="200000" step="5000" value={maxKm} onChange={e => { setMaxKm(+e.target.value); setPage(0); }} style={{ flex:1 }}/>
+          </div>
+          <div style={{ display:'flex', gap:8, alignItems:'center', minWidth:150 }}>
+            <span style={{ fontSize:11, fontWeight:600, color:'var(--mid)', textTransform:'uppercase', letterSpacing:0.5, whiteSpace:'nowrap' }}>From: <strong style={{ color:'var(--dark)' }}>{minYear}</strong></span>
+            <input type="range" min="2015" max="2025" step="1" value={minYear} onChange={e => { setMinYear(+e.target.value); setPage(0); }} style={{ flex:1 }}/>
+          </div>
+        </div>
+        {/* Column headers */}
+        <div style={{ display:'grid', gridTemplateColumns:COLS, gap:12, padding:'8px 24px',
+          fontSize:10, fontWeight:600, color:'var(--mid)', textTransform:'uppercase', letterSpacing:0.5, flexShrink:0 }}>
+          <span>Platform</span><span>Year</span><span>Mileage</span><span>Condition</span><span>Location</span><span>Price</span><span>Score</span>
+        </div>
+        {/* Rows */}
+        <div style={{ overflowY:'auto', flex:1, padding:'0 24px 8px' }}>
+          {visible.length === 0 ? (
+            <div style={{ textAlign:'center', padding:'40px', color:'var(--mid)', fontSize:14 }}>No listings match filters</div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {visible.map((l, i) => {
+                const isBest = i === 0 && page === 0;
+                return (
+                  <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer"
+                    style={{ display:'grid', gridTemplateColumns:COLS, gap:12, alignItems:'center',
+                      padding:'10px 12px', background: isBest ? 'var(--dark)' : 'var(--bg)',
+                      border:`1px solid ${isBest ? 'var(--dark)' : 'var(--border)'}`,
+                      borderRadius:10, textDecoration:'none', transition:'opacity .15s' }}
+                    onMouseEnter={e => e.currentTarget.style.opacity='0.85'}
+                    onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+                    <div style={{ display:'flex', alignItems:'center', gap:5, overflow:'hidden' }}>
+                      {isBest && <span style={{ fontSize:9, fontWeight:700, background:'var(--accent)', color:'#fff', padding:'1px 5px', borderRadius:999, flexShrink:0 }}>Best</span>}
+                      <span style={{ fontSize:12, fontWeight:600, color: isBest?'#fff':'var(--dark)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.flag} {l.name}</span>
+                    </div>
+                    <span style={{ fontSize:12, color: isBest?'rgba(255,255,255,0.75)':'var(--mid)' }}>{l.year}</span>
+                    <span style={{ fontSize:12, color: isBest?'rgba(255,255,255,0.75)':'var(--mid)' }}>{l.mileage===0 ? 'New' : `${fmt(l.mileage)} km`}</span>
+                    <span style={{ fontSize:12, color: isBest?'rgba(255,255,255,0.75)':'var(--mid)' }}>{l.condition}</span>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, overflow:'hidden' }}>
+                      {l.ext_color && <div title={l.ext_color} style={{ width:12, height:12, borderRadius:'50%', flexShrink:0,
+                        background:{White:'#f0f0f0',Black:'#1a1a1a',Silver:'#c8c8c8',Grey:'#808080',Blue:'#2155a3',Red:'#cc2200',Green:'#2e7d32',Brown:'#795548'}[l.ext_color]||'#ccc',
+                        border:'1.5px solid rgba(0,0,0,0.15)' }}/>}
+                      <span style={{ fontSize:12, color:isBest?'rgba(255,255,255,0.75)':'var(--mid)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.location}</span>
+                    </div>
+                    <span style={{ fontSize:13, fontWeight:700, color: isBest?'#fff':'var(--dark)', whiteSpace:'nowrap' }}>€{fmt(l.price)}</span>
+                    <ScoreBadge score={l.lScore} size={40}/>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {/* Pagination */}
+        {pages > 1 && (
+          <div style={{ padding:'12px 24px', borderTop:'1px solid var(--border)', display:'flex', gap:6, justifyContent:'center', alignItems:'center', flexShrink:0 }}>
+            <button onClick={() => setPage(p => Math.max(0,p-1))} disabled={page===0}
+              style={{ padding:'5px 14px', borderRadius:8, fontSize:13, fontWeight:600,
+                background: page===0?'var(--bg)':'var(--dark)', color: page===0?'var(--mid)':'#fff',
+                cursor: page===0?'default':'pointer', border:'none', opacity: page===0?0.4:1 }}>←</button>
+            {Array.from({length:pages},(_,i)=>i).map(i => (
+              <button key={i} onClick={() => setPage(i)} style={{ width:32, height:32, borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer',
+                background: page===i?'var(--accent)':'var(--bg)', color: page===i?'#fff':'var(--mid)',
+                border:`1px solid ${page===i?'var(--accent)':'var(--border)'}` }}>{i+1}</button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(pages-1,p+1))} disabled={page===pages-1}
+              style={{ padding:'5px 14px', borderRadius:8, fontSize:13, fontWeight:600,
+                background: page===pages-1?'var(--bg)':'var(--dark)', color: page===pages-1?'var(--mid)':'#fff',
+                cursor: page===pages-1?'default':'pointer', border:'none', opacity: page===pages-1?0.4:1 }}>→</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ListingsTable ────────────────────────────────────────────────────────────
+function ListingsTable({ car, weights, platformFilter }) {
+  const [openPlatform, setOpenPlatform] = useState(null);
+  const COLS = '1fr 52px 90px 70px 1fr 82px 44px 24px';
+
+  // Group by platform, best score per platform as summary row
+  const grouped = useMemo(() => {
+    const filtered = car.listings
+      .filter(l => !platformFilter.length || platformFilter.includes(l.name))
+      .map(l => ({ ...l, lScore: listingWeightedScore(car, l, weights) }));
+    const map = {};
+    filtered.forEach(l => { if (!map[l.name]) map[l.name] = []; map[l.name].push(l); });
+    return Object.values(map)
+      .map(group => ({
+        best: group.sort((a,b) => b.lScore - a.lScore)[0],
+        count: group.length,
+        platform: { name: group[0].name, url: group[0].url, flag: group[0].flag },
+      }))
+      .sort((a,b) => b.best.lScore - a.best.lScore);
+  }, [car, weights, platformFilter]);
+
+  if (!grouped.length) return <div style={{ fontSize:13, color:'var(--mid)', padding:'12px 0' }}>No listings from selected platforms.</div>;
+
+  return (
+    <div>
+      <div style={{ fontSize:12, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'var(--mid)', marginBottom:12 }}>
+        Live Listings — {car.listings.length} total across {grouped.length} platform{grouped.length!==1?'s':''} · click row to expand
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:COLS, gap:12, padding:'6px 14px',
+        fontSize:10, fontWeight:600, color:'var(--mid)', textTransform:'uppercase', letterSpacing:0.5 }}>
+        <span>Platform</span><span>Year</span><span>Mileage</span><span>Condition</span><span>Location</span><span>Price</span><span>Score</span><span></span>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+        {grouped.map(({ best: l, count, platform }, i) => (
+          <div key={l.id} onClick={() => setOpenPlatform(platform)}
+            style={{ display:'grid', gridTemplateColumns:COLS, gap:12, alignItems:'center',
+              padding:'10px 14px', cursor:'pointer',
+              background: i===0 ? 'var(--dark)' : 'var(--bg)',
+              border:`1px solid ${i===0 ? 'var(--dark)' : 'var(--border)'}`,
+              borderRadius:10, transition:'opacity .15s' }}
+            onMouseEnter={e => e.currentTarget.style.opacity='0.85'}
+            onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+            <div style={{ display:'flex', alignItems:'center', gap:6, overflow:'hidden' }}>
+              {i===0 && <span style={{ fontSize:9, fontWeight:700, background:'var(--accent)', color:'#fff', padding:'1px 5px', borderRadius:999, flexShrink:0 }}>Best</span>}
+              <span style={{ fontSize:12, fontWeight:700, color: i===0?'#fff':'var(--dark)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.flag} {l.name}</span>
+              {count > 1 && <span style={{ fontSize:10, background: i===0?'rgba(255,255,255,0.15)':'var(--border)', color: i===0?'rgba(255,255,255,0.8)':'var(--mid)', padding:'1px 6px', borderRadius:999, flexShrink:0 }}>{count}</span>}
+            </div>
+            <span style={{ fontSize:12, color: i===0?'rgba(255,255,255,0.75)':'var(--mid)' }}>{l.year}</span>
+            <span style={{ fontSize:12, color: i===0?'rgba(255,255,255,0.75)':'var(--mid)' }}>{l.mileage===0?'New':`${fmt(l.mileage)} km`}</span>
+            <span style={{ fontSize:12, color: i===0?'rgba(255,255,255,0.75)':'var(--mid)' }}>{l.condition}</span>
+            <span style={{ fontSize:12, color: i===0?'rgba(255,255,255,0.75)':'var(--mid)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.location}</span>
+            <span style={{ fontSize:13, fontWeight:700, color: i===0?'#fff':'var(--dark)', whiteSpace:'nowrap' }}>€{fmt(l.price)}</span>
+            <ScoreBadge score={l.lScore} size={40}/>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity:0.45 }}>
+              <path d="M2 4l4 4 4-4" stroke={i===0?'#fff':'var(--dark)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop:8, fontSize:11, color:'var(--mid)' }}>↻ Refreshed daily · Scores adjust for year &amp; mileage · Click a row to see all listings from that platform</div>
+      {openPlatform && <PlatformModal car={car} platform={openPlatform} weights={weights} onClose={() => setOpenPlatform(null)}/>}
+    </div>
+  );
+}
+// ─── CarDetail ────────────────────────────────────────────────────────────────
+function CarDetail({ car, score, weights, platformFilter, onClose }) {
+  useEffect(() => {
+    const h = e => e.key==='Escape' && onClose();
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
+  }, [onClose]);
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(9,36,119,0.45)',
+      display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+      onClick={e => e.target===e.currentTarget && onClose()}>
+      <div style={{ background:'var(--surface)', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:760,
+        maxHeight:'92vh', overflow:'auto', padding:'28px 28px 40px', boxShadow:'var(--shadow-lg)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:20 }}>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+              {FUEL_ICONS[car.fuel] && FUEL_ICONS[car.fuel]('var(--mid)')}
+              <span style={{ fontSize:12, color:'var(--mid)', textTransform:'uppercase', letterSpacing:0.5, fontWeight:600 }}>{car.fuel} · {car.type} · {car.year}</span>
+            </div>
+            <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:'-0.5px' }}>{car.brand} {car.name}</h2>
+            <div style={{ fontSize:13, color:'var(--mid)', marginTop:4 }}>
+              From <strong style={{ color:'var(--dark)', fontSize:18 }}>€{fmt(bestListing(car).price)}</strong>
+              <span style={{ marginLeft:8 }}>· MSRP €{fmt(car.msrp)}</span>
+            </div>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <ScoreBadge score={score} size={70}/>
+            <button onClick={onClose} style={{ width:34, height:34, borderRadius:999, background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="var(--dark)" strokeWidth="2" strokeLinecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div style={{ background:'var(--bg)', borderRadius:12, padding:20, display:'flex', justifyContent:'center', marginBottom:20 }}>
+          <CarImage car={car} w={260} h={146}/>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(90px,1fr))', gap:10, marginBottom:24 }}>
+          {(car.fuel==='Hybrid' && car.elec_range_km
+            ? [{l:'EV Range',v:`~${car.elec_range_km} km`},{l:'Fuel Range',v:`~${car.range_km - car.elec_range_km} km`}]
+            : [{l:'Range',v:`${car.range_km} km`}]
+          ).concat([{l:'Boot',v:`${car.boot_l} L`},{l:'Seats',v:car.seats},{l:'NCAP',v:'★'.repeat(car.ncap)},{l:car.charge_kw>0?'DC Peak':'Charging',v:car.charge_kw>0?`${car.charge_kw} kW`:'N/A'},{l:'Gearbox',v:car.transmission||'Auto'}]).map(s => (
+            <div key={s.l} style={{ background:'var(--bg)', borderRadius:10, padding:'10px 12px', textAlign:'center' }}>
+              <div style={{ fontSize:16, fontWeight:700 }}>{s.v}</div>
+              <div style={{ fontSize:10, color:'var(--mid)', marginTop:2, textTransform:'uppercase', letterSpacing:0.5 }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginBottom:28 }}>
+          <div style={{ fontSize:12, fontWeight:600, textTransform:'uppercase', letterSpacing:1, color:'var(--mid)', marginBottom:12 }}>Score Breakdown (2024 model)</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
+            {CRITERIA.map(c => {
+              const raw = car.scores[c.key] || 0;
+              const w = weights[c.key] || 0;
+              const col = scoreColor(raw);
+              return (
+                <div key={c.key}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                    <span style={{ fontSize:13, fontWeight:500 }}>{c.label}</span>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      {w===0 && <span style={{ fontSize:10, color:'var(--mid)', background:'var(--bg)', padding:'1px 6px', borderRadius:999 }}>not weighted</span>}
+                      <span style={{ fontSize:13, fontWeight:700, color:col }}>{raw.toFixed(1)}</span>
+                    </div>
+                  </div>
+                  <div style={{ height:5, background:'var(--border)', borderRadius:3, overflow:'hidden' }}>
+                    <div style={{ height:'100%', width:`${raw*10}%`, background:col, borderRadius:3 }}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <ListingsTable car={car} weights={weights} platformFilter={platformFilter}/>
+      </div>
+    </div>
+  );
+}
+
+// ─── ResultsScreen ────────────────────────────────────────────────────────────
+function ResultsScreen({ filters, setFilters, weights, setWeights, onBack, showBadges }) {
+  const [selectedCar, setSelectedCar] = useState(null);
+  const [showWeights, setShowWeights] = useState(false);
+  const [sortBy, setSortBy] = useState('score');
+  const [scrolled, setScrolled] = useState(false);
+  const [openMini, setOpenMini] = useState(null);
+  const [openDrop, setOpenDrop] = useState(null);
+  const navRef = useRef(null);
+  const popRef = useRef(null);
+  const dropBarRef = useRef(null);
+
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 200);
+    window.addEventListener('scroll', h, { passive:true });
+    return () => window.removeEventListener('scroll', h);
+  }, []);
+
+  useEffect(() => {
+    if (!openMini) return;
+    const h = e => {
+      if (!navRef.current?.contains(e.target) && !popRef.current?.contains(e.target)) setOpenMini(null);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [openMini]);
+
+  useEffect(() => {
+    if (!openDrop) return;
+    const h = e => { if (dropBarRef.current && !dropBarRef.current.contains(e.target)) setOpenDrop(null); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [openDrop]);
+
+  const platformFilter = filters.platforms || [];
+
+  const filtered = useMemo(() => CAR_DATA.filter(car => {
+    if (filters.fuel.length && !filters.fuel.includes(car.fuel)) return false;
+    if (filters.type.length && !filters.type.includes(car.type)) return false;
+    if (car.seats < filters.seats) return false;
+    if ((filters.minBoot||0) > 0 && car.boot_l < filters.minBoot) return false;
+    if ((filters.maxBoot||1200) < 1200 && car.boot_l > filters.maxBoot) return false;
+    const cheapest = bestListing(car).price;
+    if (cheapest > filters.budgetMax) return false;
+    if (filters.budgetMin > 0 && cheapest < filters.budgetMin) return false;
+    if ((filters.minRange||0) > 0 && car.range_km < filters.minRange) return false;
+    if ((filters.transmission||[]).length && !filters.transmission.includes(car.transmission)) return false;
+    if (platformFilter.length && !car.listings.some(l => platformFilter.includes(l.name))) return false;
+    return true;
+  }), [filters, platformFilter]);
+
+  const ranked = useMemo(() => {
+    return filtered
+      .map(car => ({ car, score: modelWeightedScore(car, weights) }))
+      .sort((a, b) => sortBy==='score' ? b.score-a.score : bestListing(a.car).price-bestListing(b.car).price);
+  }, [filtered, weights, sortBy]);
+
+  const selEntry = ranked.find(r => r.car.id === selectedCar?.id);
+
+  const fuelActive = filters.fuel.length > 0;
+  const transActive = (filters.transmission||[]).length > 0;
+  const priceActive = filters.budgetMin > 0 || filters.budgetMax < 80000;
+  const marketActive = (filters.platforms||[]).length > 0;
+
+  const MiniBtn = ({ id, icon, active, label }) => (
+    <button title={label} onClick={() => setOpenMini(o => o===id ? null : id)} style={{
+      position:'relative', width:32, height:32, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center',
+      background: openMini===id ? 'rgba(255,255,255,0.22)' : active ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.07)',
+      border:`1px solid ${openMini===id ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)'}`,
+      transition:'all .15s', cursor:'pointer', flexShrink:0 }}>
+      {icon}
+      {active && <div style={{ position:'absolute', top:5, right:5, width:5, height:5, borderRadius:'50%', background:'var(--accent)', border:'1.5px solid var(--dark)' }}/>}
+    </button>
+  );
+
+  const miniPop = openMini && (
+    <div ref={popRef} style={{ position:'fixed', top:52, right:20, zIndex:300,
+      background:'var(--surface)', borderRadius:14, padding:18,
+      boxShadow:'0 12px 48px rgba(0,0,0,0.18)', border:'1px solid var(--border)', minWidth:256 }}>
+      <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:1.2, color:'var(--mid)', marginBottom:12 }}>
+        {{priorities:'Priorities',sort:'Sort by',fuel:'Fuel type',trans:'Transmission',price:'Price range',market:'Marketplace'}[openMini]}
+      </div>
+      {openMini==='priorities' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {CRITERIA.map(c => (
+            <div key={c.key} style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:12, flex:1 }}>{c.label}</span>
+              <input type="range" min="0" max="10" step="1" value={weights[c.key]}
+                onChange={e => setWeights(w => ({...w,[c.key]:+e.target.value}))} style={{ width:80 }}/>
+              <span style={{ fontSize:12, fontWeight:700, color:'var(--accent)', width:14, textAlign:'right' }}>{weights[c.key]}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {openMini==='sort' && (
+        <div style={{ display:'flex', gap:8 }}>
+          {[['score','Score'],['price','Price']].map(([k,l]) => (
+            <button key={k} onClick={() => setSortBy(k)} style={{ flex:1, padding:'8px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer',
+              background:sortBy===k?'var(--dark)':'var(--bg)', color:sortBy===k?'#fff':'var(--mid)',
+              border:`1.5px solid ${sortBy===k?'var(--dark)':'var(--border)'}` }}>{l}</button>
+          ))}
+        </div>
+      )}
+      {openMini==='fuel' && (
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+          {['Electric','Hybrid','Petrol','Diesel'].map(f => { const Icon=FUEL_ICONS[f]; const a=filters.fuel.includes(f);
+            return <button key={f} onClick={() => setFilters(fi=>({...fi,fuel:fi.fuel.includes(f)?fi.fuel.filter(x=>x!==f):[...fi.fuel,f]}))}
+              style={{ display:'flex', alignItems:'center', gap:4, padding:'5px 10px', borderRadius:999, fontSize:12, fontWeight:600, cursor:'pointer',
+                background:a?'var(--dark)':'var(--bg)', color:a?'#fff':'var(--mid)', border:`1.5px solid ${a?'var(--dark)':'var(--border)'}` }}>
+              {Icon&&Icon(a?'#fff':'var(--mid)')}{f}
+            </button>;
+          })}
+        </div>
+      )}
+      {openMini==='trans' && (
+        <div style={{ display:'flex', gap:8 }}>
+          {['Automatic','Manual'].map(t => { const a=(filters.transmission||[]).includes(t);
+            return <button key={t} onClick={()=>setFilters(fi=>{const ar=fi.transmission||[];return{...fi,transmission:ar.includes(t)?ar.filter(x=>x!==t):[...ar,t]};})}
+              style={{ flex:1, padding:'8px', borderRadius:8, fontSize:13, fontWeight:600, cursor:'pointer',
+                background:a?'var(--dark)':'var(--bg)', color:a?'#fff':'var(--mid)', border:`1.5px solid ${a?'var(--dark)':'var(--border)'}` }}>{t}</button>;
+          })}
+        </div>
+      )}
+      {openMini==='price' && (
+        <div>
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13, fontWeight:700, marginBottom:10 }}>
+            <span>{filters.budgetMin===0?'Any':`€${fmt(filters.budgetMin)}`}</span>
+            <span>{filters.budgetMax>=80000?'€80k+':`€${fmt(filters.budgetMax)}`}</span>
+          </div>
+          <div className="dual-range" style={{ marginBottom:10 }}>
+            <div style={{ position:'absolute', left:0, right:0, height:4, borderRadius:2, background:'var(--border)' }}/>
+            <div style={{ position:'absolute', left:`${(filters.budgetMin/80000)*100}%`, width:`${((filters.budgetMax-filters.budgetMin)/80000)*100}%`, height:4, borderRadius:2, background:'var(--dark)' }}/>
+            <input type="range" min="0" max="80000" step="2500" value={filters.budgetMin}
+              onChange={e=>{const v=+e.target.value;if(v<filters.budgetMax-2500)setFilters(f=>({...f,budgetMin:v}));}}/>
+            <input type="range" min="0" max="80000" step="2500" value={filters.budgetMax}
+              onChange={e=>{const v=+e.target.value;if(v>filters.budgetMin+2500)setFilters(f=>({...f,budgetMax:v}));}}/>
+          </div>
+          <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+            {[{l:'Any',mn:0,mx:80000},{l:'<€25k',mn:0,mx:25000},{l:'€25–40k',mn:25000,mx:40000},{l:'€40–60k',mn:40000,mx:60000},{l:'€60k+',mn:60000,mx:80000}].map(p=>(
+              <button key={p.l} onClick={()=>setFilters(f=>({...f,budgetMin:p.mn,budgetMax:p.mx}))}
+                style={{ padding:'4px 8px', borderRadius:999, fontSize:11, fontWeight:600, cursor:'pointer',
+                  background:filters.budgetMin===p.mn&&filters.budgetMax===p.mx?'var(--dark)':'var(--bg)',
+                  color:filters.budgetMin===p.mn&&filters.budgetMax===p.mx?'#fff':'var(--mid)',
+                  border:`1px solid ${filters.budgetMin===p.mn&&filters.budgetMax===p.mx?'var(--dark)':'var(--border)'}` }}>{p.l}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {openMini==='market' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+          {PLATFORMS.map(p => { const a=filters.platforms.length===0||filters.platforms.includes(p.id);
+            return <button key={p.id} onClick={()=>setFilters(f=>{const isAll=f.platforms.length===0;if(isAll)return{...f,platforms:PLATFORMS.filter(x=>x.id!==p.id).map(x=>x.id)};const next=f.platforms.includes(p.id)?f.platforms.filter(x=>x!==p.id):[...f.platforms,p.id];return{...f,platforms:next.length===PLATFORMS.length?[]:next};})}
+              style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 10px', borderRadius:8, cursor:'pointer',
+                background:a?'var(--dark)':'var(--bg)', border:`1px solid ${a?'var(--dark)':'var(--border)'}` }}>
+              <span style={{ fontSize:14 }}>{p.flag}</span>
+              <span style={{ fontSize:12, fontWeight:600, color:a?'#fff':'var(--mid)' }}>{p.label}</span>
+            </button>;
+          })}
+          {filters.platforms.length>0&&<button onClick={()=>setFilters(f=>({...f,platforms:[]}))}
+            style={{ fontSize:11, color:'var(--mid)', cursor:'pointer', padding:'4px', textAlign:'center', border:'1px dashed var(--border)', borderRadius:6, marginTop:2 }}>
+            Show all platforms
+          </button>}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
+      {/* ── Nav ── */}
+      <div ref={navRef} style={{ background:'var(--dark)', color:'#fff', padding:'12px 20px', display:'flex', alignItems:'center', gap:10,
+        position:'sticky', top:0, zIndex:50, boxShadow:'0 2px 16px rgba(0,0,0,.2)' }}>
+        <button onClick={onBack} style={{ color:'rgba(255,255,255,0.55)', display:'flex', alignItems:'center', gap:5, fontSize:13, flexShrink:0 }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 4L6 8l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Back
+        </button>
+        <div style={{ display:'flex', alignItems:'center', gap:8, flex:1 }}>
+          <div style={{ width:22, height:22, background:'var(--accent)', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="12" height="12" viewBox="0 0 18 18" fill="none"><path d="M3 13L6 6L9 9.5L12 4L15 8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </div>
+          <span style={{ fontWeight:700, fontSize:15 }}>RankAutos</span>
+        </div>
+        {/* Mini icons — fade in on scroll */}
+        <div style={{ display:'flex', gap:4, alignItems:'center', opacity:scrolled?1:0, transform:scrolled?'translateY(0)':'translateY(-3px)', transition:'opacity .22s, transform .22s', pointerEvents:scrolled?'all':'none' }}>
+          <MiniBtn id="priorities" label="Priorities" active={false} icon={<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 3.5h12M3 7h8M5 10.5h4" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" strokeLinecap="round"/></svg>}/>
+          <MiniBtn id="sort" label="Sort" active={sortBy!=='score'} icon={<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 2v10M3 12l-1.5-2M3 12l1.5-2M11 2v10M11 2l-1.5 2M11 2l1.5 2" stroke="rgba(255,255,255,0.85)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}/>
+          <MiniBtn id="fuel" label="Fuel type" active={fuelActive} icon={<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M8 1.5L3.5 7H7L5 12.5L10.5 6H7L8 1.5Z" fill="rgba(255,255,255,0.85)"/></svg>}/>
+          <MiniBtn id="trans" label="Transmission" active={transActive} icon={<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="3.5" cy="3.5" r="1.8" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2"/><circle cx="10.5" cy="3.5" r="1.8" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2"/><circle cx="3.5" cy="10.5" r="1.8" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2"/><circle cx="7" cy="7" r="1.5" fill="rgba(255,255,255,0.85)"/><path d="M3.5 5.3v3.2M5.3 3.5h3.4M5.3 10.5H7" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" strokeLinecap="round"/></svg>}/>
+          <MiniBtn id="price" label="Price range" active={priceActive} icon={<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.3"/><path d="M8.5 4.8A2.5 2.5 0 105 7M4.5 6h5M4.5 8h5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.1" strokeLinecap="round"/></svg>}/>
+          <MiniBtn id="market" label="Marketplace" active={marketActive} icon={<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="5.5" r="3.5" stroke="rgba(255,255,255,0.85)" strokeWidth="1.3"/><path d="M8.5 8.5l4 4" stroke="rgba(255,255,255,0.85)" strokeWidth="1.4" strokeLinecap="round"/></svg>}/>
+          <div style={{ width:1, height:18, background:'rgba(255,255,255,0.15)', margin:'0 2px' }}/>
+        </div>
+        <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)', display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
+          <span style={{ width:6, height:6, borderRadius:'50%', background:'#4caf50', display:'inline-block' }}/>
+          {ranked.length} cars
+        </span>
+      </div>
+
+      {miniPop}
+
+      <div style={{ maxWidth:900, margin:'0 auto', padding:'24px 24px 60px' }}>
+        {showWeights && (
+          <div style={{ background:'var(--surface)', borderRadius:'var(--radius)', padding:24, marginBottom:16, boxShadow:'var(--shadow)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
+              <div>
+                <div style={{ fontSize:15, fontWeight:700 }}>Adjust Priorities</div>
+                <div style={{ fontSize:12, color:'var(--mid)', marginTop:2 }}>Rankings update live. Set to 0 to ignore entirely.</div>
+              </div>
+              <button onClick={() => setWeights({ range:5,safety:5,practicality:5,tech:5,reliability:5,value:5,charging:3 })}
+                style={{ fontSize:12, color:'var(--mid)', cursor:'pointer', padding:'4px 10px', border:'1px solid var(--border)', borderRadius:6 }}>Reset</button>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              {CRITERIA.map(c => <WeightSlider key={c.key} criterion={c} value={weights[c.key]} onChange={v => setWeights(w => ({...w,[c.key]:v}))}/>)}
+            </div>
+          </div>
+        )}
+
+        {/* Compact filter bar */}
+        <div ref={dropBarRef} style={{ background:'var(--surface)', borderRadius:12, border:'1px solid var(--border)', marginBottom:14, position:'relative', zIndex:20 }}>
+          {/* Priorities row */}
+          <div style={{ padding:'9px 14px', background:'var(--accent-light)', borderBottom:'1px solid var(--border)', borderRadius:'12px 12px 0 0', display:'flex', alignItems:'center', gap:8 }}>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5l1.4 3.2H12l-2.8 2 1.1 3.3L7 8.2l-3.3 1.8 1.1-3.3L2 4.7h3.6L7 1.5z" fill="var(--accent)" stroke="var(--accent)" strokeWidth="0.5" strokeLinejoin="round"/></svg>
+            <span style={{ fontSize:11, fontWeight:800, color:'var(--accent)', textTransform:'uppercase', letterSpacing:1 }}>Priorities</span>
+            <span style={{ fontSize:11, color:'var(--mid)' }}>— drives the ranking</span>
+            <div style={{ flex:1 }}/>
+            <button onClick={() => setShowWeights(w => !w)} style={{ padding:'6px 12px', borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer',
+              background:showWeights?'var(--accent)':'var(--dark)', color:'#fff', border:'none',
+              display:'flex', alignItems:'center', gap:5, transition:'background .15s' }}>
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1 3h10M3 6h6M5 9h2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              {showWeights ? 'Close' : 'Adjust priorities'}
+            </button>
+          </div>
+          {/* Dropdown triggers */}
+          <div style={{ padding:'8px 12px', display:'flex', gap:5, flexWrap:'wrap', alignItems:'center' }}>
+            {[
+              { id:'sort', label: sortBy==='score'?'Sort: Score':'Sort: Price', active: sortBy!=='score', width:160,
+                content:(
+                  <div style={{display:'flex',gap:6}}>
+                    {[['score','Score'],['price','Price']].map(([k,l])=>(
+                      <button key={k} onClick={()=>{setSortBy(k);setOpenDrop(null);}} style={{flex:1,padding:'7px',borderRadius:7,fontSize:12,fontWeight:600,cursor:'pointer',
+                        background:sortBy===k?'var(--dark)':'var(--bg)',color:sortBy===k?'#fff':'var(--mid)',
+                        border:`1.5px solid ${sortBy===k?'var(--dark)':'var(--border)'}`}}>{l}</button>
+                    ))}
+                  </div>
+                )},
+              { id:'fuel', label: fuelActive?`Fuel (${filters.fuel.length})`:'Fuel', active:fuelActive, width:240,
+                content:(
+                  <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+                    {['Electric','Hybrid','Petrol','Diesel'].map(f=>{const Icon=FUEL_ICONS[f];const a=filters.fuel.includes(f);
+                      return <button key={f} onClick={()=>setFilters(fi=>({...fi,fuel:fi.fuel.includes(f)?fi.fuel.filter(x=>x!==f):[...fi.fuel,f]}))}
+                        style={{display:'flex',alignItems:'center',gap:4,padding:'5px 9px',borderRadius:999,fontSize:12,fontWeight:600,cursor:'pointer',
+                          background:a?'var(--dark)':'var(--bg)',color:a?'#fff':'var(--mid)',border:`1.5px solid ${a?'var(--dark)':'var(--border)'}`}}>
+                        {Icon&&Icon(a?'#fff':'var(--mid)')}{f}</button>;
+                    })}
+                  </div>
+                )},
+              { id:'trans', label: transActive?`Gearbox: ${(filters.transmission||[]).map(t=>t==='Automatic'?'Auto':t).join('+')}`:'Gearbox', active:transActive, width:210,
+                content:(
+                  <div style={{display:'flex',gap:6}}>
+                    {['Automatic','Manual'].map(t=>{const a=(filters.transmission||[]).includes(t);
+                      return <button key={t} onClick={()=>setFilters(fi=>{const ar=fi.transmission||[];return{...fi,transmission:ar.includes(t)?ar.filter(x=>x!==t):[...ar,t]};})}
+                        style={{flex:1,padding:'8px',borderRadius:7,fontSize:12,fontWeight:600,cursor:'pointer',
+                          background:a?'var(--dark)':'var(--bg)',color:a?'#fff':'var(--mid)',border:`1.5px solid ${a?'var(--dark)':'var(--border)'}`}}>{t}</button>;
+                    })}
+                  </div>
+                )},
+              { id:'price', label: priceActive?`€${fmt(filters.budgetMin)}–${filters.budgetMax>=80000?'80k+':fmt(filters.budgetMax)}`:'Price', active:priceActive, width:250,
+                content:(
+                  <div>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:12,fontWeight:700,marginBottom:10}}>
+                      <span>{filters.budgetMin===0?'Any':`€${fmt(filters.budgetMin)}`}</span>
+                      <span>{filters.budgetMax>=80000?'€80k+':`€${fmt(filters.budgetMax)}`}</span>
+                    </div>
+                    <div className="dual-range" style={{marginBottom:10}}>
+                      <div style={{position:'absolute',left:0,right:0,height:4,borderRadius:2,background:'var(--border)'}}/>
+                      <div style={{position:'absolute',left:`${(filters.budgetMin/80000)*100}%`,width:`${((filters.budgetMax-filters.budgetMin)/80000)*100}%`,height:4,borderRadius:2,background:'var(--dark)'}}/>
+                      <input type="range" min="0" max="80000" step="2500" value={filters.budgetMin} onChange={e=>{const v=+e.target.value;if(v<filters.budgetMax-2500)setFilters(f=>({...f,budgetMin:v}));}}/>
+                      <input type="range" min="0" max="80000" step="2500" value={filters.budgetMax} onChange={e=>{const v=+e.target.value;if(v>filters.budgetMin+2500)setFilters(f=>({...f,budgetMax:v}));}}/>
+                    </div>
+                    <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                      {[{l:'Any',mn:0,mx:80000},{l:'<€25k',mn:0,mx:25000},{l:'€25–40k',mn:25000,mx:40000},{l:'€40–60k',mn:40000,mx:60000},{l:'€60k+',mn:60000,mx:80000}].map(p=>(
+                        <button key={p.l} onClick={()=>setFilters(f=>({...f,budgetMin:p.mn,budgetMax:p.mx}))}
+                          style={{padding:'4px 7px',borderRadius:999,fontSize:11,fontWeight:600,cursor:'pointer',
+                            background:filters.budgetMin===p.mn&&filters.budgetMax===p.mx?'var(--dark)':'var(--bg)',
+                            color:filters.budgetMin===p.mn&&filters.budgetMax===p.mx?'#fff':'var(--mid)',
+                            border:`1px solid ${filters.budgetMin===p.mn&&filters.budgetMax===p.mx?'var(--dark)':'var(--border)'}`}}>{p.l}</button>
+                      ))}
+                    </div>
+                  </div>
+                )},
+              { id:'market', label: marketActive?`Platforms (${filters.platforms.length})`:'Platforms', active:marketActive, width:220,
+                content:(
+                  <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                    {PLATFORMS.map(p=>{const a=filters.platforms.length===0||filters.platforms.includes(p.id);
+                      return <button key={p.id} onClick={()=>setFilters(f=>{const isAll=f.platforms.length===0;if(isAll)return{...f,platforms:PLATFORMS.filter(x=>x.id!==p.id).map(x=>x.id)};const next=f.platforms.includes(p.id)?f.platforms.filter(x=>x!==p.id):[...f.platforms,p.id];return{...f,platforms:next.length===PLATFORMS.length?[]:next};})}
+                        style={{display:'flex',alignItems:'center',gap:7,padding:'6px 9px',borderRadius:7,cursor:'pointer',
+                          background:a?'var(--dark)':'var(--bg)',border:`1px solid ${a?'var(--dark)':'var(--border)'}`}}>
+                        <span style={{fontSize:13}}>{p.flag}</span>
+                        <span style={{fontSize:12,fontWeight:600,color:a?'#fff':'var(--mid)'}}>{p.label}</span>
+                        {!a&&<span style={{marginLeft:'auto',fontSize:10,color:'var(--mid)'}}>off</span>}
+                      </button>;
+                    })}
+                    {filters.platforms.length>0&&<button onClick={()=>setFilters(f=>({...f,platforms:[]}))}
+                      style={{fontSize:11,color:'var(--mid)',cursor:'pointer',padding:'4px',textAlign:'center',border:'1px dashed var(--border)',borderRadius:6,marginTop:2}}>All platforms</button>}
+                  </div>
+                )},
+              { id:'colour', label:(filters.colors||[]).length>0?`Colour (${filters.colors.length})`:'Colour', active:(filters.colors||[]).length>0, width:230,
+                content:(
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {[{n:'White',h:'#f0f0f0',b:'#ccc'},{n:'Black',h:'#1a1a1a',b:'#000'},{n:'Silver',h:'#c8c8c8',b:'#999'},{n:'Grey',h:'#808080',b:'#555'},{n:'Blue',h:'#2155a3',b:'#1a4080'},{n:'Red',h:'#cc2200',b:'#aa1100'},{n:'Green',h:'#2e7d32',b:'#1b5e20'},{n:'Brown',h:'#795548',b:'#5d4037'}].map(c=>{
+                      const a=(filters.colors||[]).includes(c.n);
+                      return <button key={c.n} title={c.n} onClick={()=>setFilters(fi=>{const ar=fi.colors||[];return{...fi,colors:ar.includes(c.n)?ar.filter(x=>x!==c.n):[...ar,c.n]};})}
+                        style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'5px 6px',borderRadius:8,cursor:'pointer',
+                          background:a?'var(--dark)':'var(--bg)',border:`1.5px solid ${a?'var(--dark)':'var(--border)'}`}}>
+                        <div style={{width:24,height:24,borderRadius:'50%',background:c.h,border:`2px solid ${c.b}`,boxShadow:a?'0 0 0 2px var(--accent)':'none'}}/>
+                        <span style={{fontSize:9,fontWeight:600,color:a?'#fff':'var(--mid)'}}>{c.n}</span>
+                      </button>;
+                    })}
+                  </div>
+                )},
+            ].map(({id,label,active,width,content}) => (
+              <div key={id} style={{position:'relative'}}>
+                <button onClick={()=>setOpenDrop(o=>o===id?null:id)} style={{
+                  display:'flex', alignItems:'center', gap:5, padding:'6px 11px', borderRadius:7, cursor:'pointer',
+                  background: openDrop===id?'var(--dark)':active?'oklch(0.93 0.03 260)':'var(--bg)',
+                  border:`1.5px solid ${openDrop===id?'var(--dark)':active?'var(--dark)':'var(--border)'}`,
+                  fontSize:12, fontWeight:600, color:openDrop===id?'#fff':active?'var(--dark)':'var(--mid)',
+                  transition:'all .15s', whiteSpace:'nowrap' }}>
+                  {label}
+                  <svg width="9" height="9" viewBox="0 0 9 9" fill="none" style={{transform:openDrop===id?'rotate(180deg)':'none',transition:'transform .15s',flexShrink:0}}>
+                    <path d="M1.5 3l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                {openDrop===id && (
+                  <div style={{position:'absolute',top:'calc(100% + 5px)',left:0,zIndex:100,
+                    background:'var(--surface)',borderRadius:10,padding:13,
+                    border:'1px solid var(--border)',boxShadow:'0 8px 32px rgba(0,0,0,0.13)',minWidth:width}}>
+                    {content}
+                  </div>
+                )}
+              </div>
+            ))}
+            {(filters.fuel.length+(filters.transmission||[]).length+(filters.colors||[]).length+(filters.platforms||[]).length+(priceActive?1:0))>0&&(
+              <button onClick={()=>setFilters(f=>({...f,fuel:[],transmission:[],colors:[],platforms:[],budgetMin:0,budgetMax:80000}))}
+                style={{fontSize:11,color:'var(--mid)',cursor:'pointer',padding:'5px 9px',border:'1px dashed var(--border)',borderRadius:7}}>
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+                {ranked.length === 0 ? (
+          <div style={{ textAlign:'center', padding:60, color:'var(--mid)' }}>
+            <div style={{ fontSize:32, marginBottom:12 }}>○</div>
+            <div style={{ fontSize:16 }}>No cars match your filters</div>
+            <button onClick={() => setFilters({ fuel:[],type:[],budgetMin:0,budgetMax:80000,seats:0,platforms:[],countries:[],minRange:0,transmission:[],colors:[],minBoot:0 })}
+              style={{ marginTop:16, fontSize:13, color:'var(--accent)', cursor:'pointer', textDecoration:'underline' }}>Clear all filters</button>
+          </div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {ranked.map(({ car, score }, i) => (
+              <ResultCard key={car.id} car={car} rank={i+1} score={score} showBadges={showBadges} onClick={() => setSelectedCar(car)}/>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {selectedCar && selEntry && (
+        <CarDetail car={selectedCar} score={selEntry.score} weights={weights} platformFilter={platformFilter} onClose={() => setSelectedCar(null)}/>
+      )}
+    </div>
+  );
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#c57cb3",
+  "darkBg": "#092477",
+  "cardRadius": 16,
+  "showBadges": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [screen, setScreen] = useState('home');
+  const [filters, setFilters] = useState({ fuel:[], type:[], budgetMin:0, budgetMax:80000, seats:0, platforms:[], countries:[], minRange:0, transmission:[], colors:[], minBoot:0, maxBoot:1200 });
+  const [weights, setWeights] = useState({ range:5, safety:5, practicality:5, tech:5, reliability:5, value:5, charging:3 });
+
+  useEffect(() => {
+    if (!tweaks) return;
+    document.documentElement.style.setProperty('--accent', tweaks.accentColor);
+    document.documentElement.style.setProperty('--dark', tweaks.darkBg);
+    document.documentElement.style.setProperty('--radius', tweaks.cardRadius + 'px');
+  }, [tweaks]);
+
+  return (
+    <>
+      {screen==='home' && <HomeScreen filters={filters} setFilters={setFilters} onStart={() => setScreen('results')}/>}
+      {screen==='results' && <ResultsScreen filters={filters} setFilters={setFilters} weights={weights} setWeights={setWeights} onBack={() => setScreen('home')} showBadges={tweaks?.showBadges ?? true}/>}
+      <TweaksPanel>
+        <TweakSection title="Brand">
+          <TweakColor label="Accent colour" value={tweaks?.accentColor} onChange={v => setTweak('accentColor', v)}/>
+          <TweakColor label="Dark background" value={tweaks?.darkBg} onChange={v => setTweak('darkBg', v)}/>
+        </TweakSection>
+        <TweakSection title="Cards">
+          <TweakSlider label="Card radius" min={0} max={24} step={2} value={tweaks?.cardRadius} onChange={v => setTweak('cardRadius', v)}/>
+          <TweakToggle label="Show badges" value={tweaks?.showBadges} onChange={v => setTweak('showBadges', v)}/>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

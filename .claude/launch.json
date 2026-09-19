@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "rankautos-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "web"],
+      "port": 3000
+    },
+    {
+      "name": "rankautos-mobile",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--prefix", "mobile"],
+      "port": 8081
+    }
+  ]
+}

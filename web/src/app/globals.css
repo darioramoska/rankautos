@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Neutrals — cool, violet-tinted */
+  --bg: #f6f4fb;
+  --surface: #ffffff;
+  --ink: #1c1330;
+  --mid: #6e6687;
+  --border: #e7e2f5;
+
+  /* Brand gradient ramp */
+  --grad-1: #3d1f8f;
+  --grad-2: #7c3aed;
+  --grad-3: #c026d3;
+  --warm-1: #fb7a54;
+  --warm-2: #f6a15a;
+
+  /* Legacy alias kept for score-driven semantics */
+  --dark: var(--ink);
+  --accent: #c026d3;
+  --accent-light: oklch(0.94 0.06 320);
+  --warm: oklch(0.72 0.17 55);
+  --warm-light: oklch(0.96 0.06 55);
+  --green: oklch(0.7 0.17 150);
+  --yellow: oklch(0.8 0.17 88);
+  --red: oklch(0.64 0.2 22);
+
+  --radius: 20px;
+  --radius-lg: 28px;
+  --radius-sm: 12px;
+  --shadow: 0 2px 14px rgba(60, 30, 110, 0.08);
+  --shadow-lg: 0 20px 60px rgba(60, 30, 110, 0.18);
+  --shadow-glow: 0 10px 30px rgba(192, 38, 212, 0.25);
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* ─── Brand gradient surfaces ──────────────────────────────────────────── */
+
+.gradient-hero {
+  background: radial-gradient(120% 140% at 8% 0%, var(--grad-2) 0%, var(--grad-1) 45%, #190a3e 100%);
+}
+
+.gradient-blob-warm {
+  background: radial-gradient(circle, var(--warm-1) 0%, var(--warm-2) 55%, transparent 75%);
+}
+
+.gradient-brand {
+  background: linear-gradient(135deg, var(--grad-2) 0%, var(--grad-3) 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #f6b6ff 0%, var(--warm-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Glass icon tile — for use on dark/gradient backgrounds */
+.tile-glass {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Soft gradient-tinted icon tile — for use on light surfaces */
+.tile-soft {
+  background: linear-gradient(135deg, #f1e9fd 0%, #fbe7f8 100%);
+  border: 1px solid #eee0fb;
+}
+
+.tile-soft-active {
+  background: linear-gradient(135deg, #e2cdfb 0%, #f8cdf1 100%);
+  border: 1px solid #d7b3f7;
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ─── Range inputs ─────────────────────────────────────────────────────── */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--grad-2), var(--grad-3));
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+  cursor: grab;
+}
+input[type="range"]:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+
+/* dual-range: both tracks pointer-events:none so thumbs are always reachable */
+.dual-range {
+  position: relative;
+  height: 28px;
+  display: flex;
+  align-items: center;
+}
+.dual-range input[type="range"] {
+  position: absolute;
+  width: 100%;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 4px;
+}
+.dual-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--grad-2), var(--grad-3));
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+  cursor: grab;
+  pointer-events: all;
+}
+.dual-range input[type="range"]:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
