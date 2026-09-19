@@ -18,6 +18,9 @@ export const PLATFORMS: Platform[] = [
   { id: "Otomoto", label: "Otomoto", flag: "🇵🇱", url: "https://www.otomoto.pl" },
   { id: "Coches.net", label: "Coches.net", flag: "🇪🇸", url: "https://www.coches.net" },
   { id: "Tesla.com", label: "Tesla.com", flag: "🏭", url: "https://www.tesla.com/en_eu" },
+  { id: "Cars.com", label: "Cars.com", flag: "🇺🇸", url: "https://www.cars.com" },
+  { id: "CarGurus", label: "CarGurus", flag: "🇺🇸", url: "https://www.cargurus.com" },
+  { id: "Autotrader.com", label: "Autotrader.com", flag: "🇺🇸", url: "https://www.autotrader.com" },
 ];
 
 const S = {
@@ -44,7 +47,17 @@ export const COUNTRIES = [
   { code: "CZ", flag: "🇨🇿", name: "Czech Rep." },
   { code: "PT", flag: "🇵🇹", name: "Portugal" },
   { code: "CH", flag: "🇨🇭", name: "Switzerland" },
+  { code: "US", flag: "🇺🇸", name: "United States" },
 ];
+
+const FLAG_COUNTRY: Record<string, string> = { "🇩🇪": "DE", "🇫🇷": "FR", "🇳🇱": "NL", "🇵🇱": "PL", "🇪🇸": "ES", "🇮🇹": "IT", "🇺🇸": "US" };
+
+/** True when a listing is sold in one of the selected markets. EU-wide and manufacturer listings serve every European market. */
+export function listingInMarkets(l: { flag: string; country?: string }, codes: string[]): boolean {
+  if (!codes.length) return true;
+  const own = l.country && l.country !== "EU" ? l.country : FLAG_COUNTRY[l.flag];
+  return own ? codes.includes(own) : codes.some((c) => c !== "US");
+}
 
 export const EXTERIOR_COLORS = [
   { name: "White", hex: "#f5f5f5", border: "#ccc" },

@@ -8,7 +8,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { CAR_DATA, CRITERIA } from "../lib/data";
+import { CAR_DATA, CRITERIA, listingInMarkets } from "../lib/data";
 import { getCars } from "../lib/getCars";
 import { bestListing, modelWeightedScore } from "../lib/scoring";
 import { useWeights } from "../lib/useWeights";
@@ -65,6 +65,8 @@ export function ResultsScreen({
       if ((filters.minRange || 0) > 0 && car.range_km < filters.minRange) return false;
       if ((filters.transmission || []).length && !filters.transmission.includes(car.transmission)) return false;
       if (platformFilter.length && !car.listings.some((l) => platformFilter.includes(l.name))) return false;
+      if ((filters.countries || []).length && !car.listings.some((l) => listingInMarkets(l, filters.countries))) return false;
+      if ((filters.colors || []).length && !car.listings.some((l) => filters.colors.includes(l.ext_color))) return false;
       return true;
     });
   }, [cars, filters, platformFilter]);

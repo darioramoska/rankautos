@@ -33,6 +33,7 @@ export interface Listing {
   name: string;
   url: string;
   flag: string;
+  country?: string;
   price: number;
   year: number;
   mileage: number;

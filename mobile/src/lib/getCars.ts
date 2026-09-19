@@ -16,7 +16,7 @@ interface DbListing {
   exterior_color: string | null;
   city: string | null;
   is_active: boolean;
-  platforms: { display_name: string; flag_emoji: string | null } | null;
+  platforms: { display_name: string; flag_emoji: string | null; country_code: string | null } | null;
 }
 
 interface DbCarModel {
@@ -54,7 +54,7 @@ const CAR_MODEL_SELECT = `
   score_range, score_safety, score_practicality, score_tech, score_reliability, score_value, score_charging,
   brands ( display_name ),
   listings ( id, url, price_eur, year, mileage_km, condition, transmission, exterior_color, city, is_active,
-    platforms ( display_name, flag_emoji ) )
+    platforms ( display_name, flag_emoji, country_code ) )
 `;
 
 function mapListing(l: DbListing): Listing {
@@ -62,6 +62,7 @@ function mapListing(l: DbListing): Listing {
     id: l.id,
     name: l.platforms?.display_name ?? "Unknown",
     flag: l.platforms?.flag_emoji ?? "",
+    country: l.platforms?.country_code ?? undefined,
     url: l.url,
     price: l.price_eur,
     year: l.year,

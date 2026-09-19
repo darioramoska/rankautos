@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { CRITERIA } from "@/lib/data";
+import { CRITERIA, listingInMarkets } from "@/lib/data";
 import { bestListing, modelWeightedScore } from "@/lib/scoring";
 import { useWeights } from "@/lib/useWeights";
 import { useFilters } from "@/lib/useFilters";
@@ -42,6 +42,8 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
       if ((filters.minRange || 0) > 0 && car.range_km < filters.minRange) return false;
       if ((filters.transmission || []).length && !filters.transmission.includes(car.transmission)) return false;
       if (platformFilter.length && !car.listings.some((l) => platformFilter.includes(l.name))) return false;
+      if ((filters.countries || []).length && !car.listings.some((l) => listingInMarkets(l, filters.countries))) return false;
+      if ((filters.colors || []).length && !car.listings.some((l) => filters.colors.includes(l.ext_color))) return false;
       return true;
     });
   }, [cars, filters, platformFilter]);

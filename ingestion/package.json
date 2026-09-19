@@ -13,7 +13,10 @@
     "typecheck": "tsc --noEmit",
     "migrate:up": "tsx src/migrateUp.ts",
     "backfill:catalog": "tsx src/backfillCatalog.ts",
-    "sync:mock": "tsx src/syncMockCatalog.ts"
+    "sync:mock": "tsx src/syncMockCatalog.ts",
+    "rollout:trims": "tsx src/rolloutTrims.ts",
+    "add:us": "tsx src/addUsListings.ts",
+    "ingest:marketcheck": "tsx src/sources/marketcheck.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
