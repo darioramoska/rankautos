@@ -127,7 +127,7 @@ export function DashboardScreen({ cars }: { cars: CarModel[] }) {
         ) : (
           <div className="flex flex-col gap-2">
             {favoriteCars.map(({ car, score }, i) => (
-              <ResultCard key={car.id} car={car} rank={i + 1} score={score} onClick={() => router.push("/results")} />
+              <ResultCard key={car.id} car={car} rank={i + 1} score={score} onClick={() => router.push(`/results?car=${car.id}`)} />
             ))}
           </div>
         )}

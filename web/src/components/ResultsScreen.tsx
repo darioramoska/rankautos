@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CRITERIA } from "@/lib/data";
 import { bestListing, modelWeightedScore } from "@/lib/scoring";
 import { useWeights } from "@/lib/useWeights";
@@ -18,6 +18,11 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
   const { filters } = useFilters();
   const [sortBy, setSortBy] = useState<SortBy>("score");
   const [selectedCarId, setSelectedCarId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("car"));
+    if (id) setSelectedCarId(id);
+  }, []);
 
   const platformFilter = filters.platforms;
 
@@ -47,7 +52,12 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
       .sort((a, b) => (sortBy === "score" ? b.score - a.score : bestListing(a.car).price - bestListing(b.car).price));
   }, [filtered, weights, sortBy]);
 
-  const selectedEntry = ranked.find((r) => r.car.id === selectedCarId);
+  const selectedEntry =
+    ranked.find((r) => r.car.id === selectedCarId) ??
+    (() => {
+      const car = cars.find((c) => c.id === selectedCarId);
+      return car ? { car, score: modelWeightedScore(car, weights) } : undefined;
+    })();
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
