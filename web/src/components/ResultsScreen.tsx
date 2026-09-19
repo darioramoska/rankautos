@@ -17,6 +17,7 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
   const { weights, setWeights, reset } = useWeights();
   const { filters } = useFilters();
   const [sortBy, setSortBy] = useState<SortBy>("score");
+  const [visible, setVisible] = useState(40);
   const [selectedCarId, setSelectedCarId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -54,6 +55,8 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
       .map((car) => ({ car, score: modelWeightedScore(car, weights) }))
       .sort((a, b) => (sortBy === "score" ? b.score - a.score : bestListing(a.car).price - bestListing(b.car).price));
   }, [filtered, weights, sortBy]);
+
+  useEffect(() => setVisible(40), [filters, weights, sortBy]);
 
   const selectedEntry =
     ranked.find((r) => r.car.id === selectedCarId) ??
@@ -159,9 +162,20 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
                 </Link>
               </div>
             ) : (
-              ranked.map(({ car, score }, i) => (
-                <ResultCard key={car.id} car={car} rank={i + 1} score={score} onClick={() => setSelectedCarId(car.id)} />
-              ))
+              <>
+                {ranked.slice(0, visible).map(({ car, score }, i) => (
+                  <ResultCard key={car.id} car={car} rank={i + 1} score={score} onClick={() => setSelectedCarId(car.id)} />
+                ))}
+                {ranked.length > visible && (
+                  <button
+                    onClick={() => setVisible((v) => v + 40)}
+                    className="rounded-2xl text-sm font-semibold"
+                    style={{ padding: "14px 0", color: "var(--grad-2)", background: "var(--surface)", border: "1px solid var(--border)" }}
+                  >
+                    Show more ({ranked.length - visible} remaining)
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
