@@ -35,6 +35,7 @@ export function HomeScreen({
   const hasBudget = filters.budgetMin > 0 || filters.budgetMax < 80000;
   const hasRange = (filters.minRange || 0) > 0;
   const hasSeats = filters.seats > 0;
+  const hasYear = (filters.yearMin || 0) > 0;
   const hasBoot = (filters.minBoot || 0) > 0 || (filters.maxBoot || 1200) < 1200;
   const transCount = (filters.transmission || []).length;
   const colorCount = (filters.colors || []).length;
@@ -47,6 +48,7 @@ export function HomeScreen({
     (hasBudget ? 1 : 0) +
     (hasRange ? 1 : 0) +
     (hasSeats ? 1 : 0) +
+    (hasYear ? 1 : 0) +
     (transCount > 0 ? 1 : 0) +
     (colorCount > 0 ? 1 : 0) +
     (hasBoot ? 1 : 0);
@@ -59,6 +61,7 @@ export function HomeScreen({
       budgetMin: 0,
       budgetMax: 80000,
       seats: 0,
+      yearMin: 0,
       platforms: [],
       countries: [],
       minRange: 0,
@@ -386,6 +389,34 @@ export function HomeScreen({
                   );
                 })}
               </div>
+            </div>
+          </FilterGroup>
+
+          {/* Registration year */}
+          <FilterGroup
+            label="Registration Year"
+            count={hasYear ? 1 : 0}
+            icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--grad-2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6.5h16v13H4z M4 10.5h16 M8 4v4 M16 4v4" /></svg>}
+          >
+            <div className="flex flex-wrap gap-2" style={{ paddingTop: 14 }}>
+              {[0, 2024, 2022, 2020, 2018, 2015, 2010].map((y) => {
+                const active = (filters.yearMin || 0) === y;
+                return (
+                  <button
+                    key={y}
+                    onClick={() => setFilters((f) => ({ ...f, yearMin: y }))}
+                    className={`rounded-full text-[13px] font-semibold transition-all duration-150 ${active ? "gradient-brand shadow-glow" : ""}`}
+                    style={{
+                      padding: "7px 16px",
+                      background: active ? undefined : "var(--surface)",
+                      color: active ? "#fff" : "var(--mid)",
+                      border: `1.5px solid ${active ? "transparent" : "var(--border)"}`,
+                    }}
+                  >
+                    {y === 0 ? "Any" : `${y}+`}
+                  </button>
+                );
+              })}
             </div>
           </FilterGroup>
 

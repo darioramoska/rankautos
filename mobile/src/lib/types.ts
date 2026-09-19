@@ -72,6 +72,7 @@ export interface Filters {
   budgetMin: number;
   budgetMax: number;
   seats: number;
+  yearMin: number;
   platforms: string[];
   countries: string[];
   minRange: number;

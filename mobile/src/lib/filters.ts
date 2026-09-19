@@ -7,6 +7,7 @@ export const DEFAULT_FILTERS: Filters = {
   budgetMin: 0,
   budgetMax: 80000,
   seats: 0,
+  yearMin: 0,
   platforms: [],
   countries: [],
   minRange: 0,

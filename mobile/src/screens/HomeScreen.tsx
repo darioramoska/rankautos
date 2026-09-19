@@ -43,6 +43,7 @@ export function HomeScreen({
   const hasBudget = filters.budgetMin > 0 || filters.budgetMax < 80000;
   const hasRange = (filters.minRange || 0) > 0;
   const hasSeats = filters.seats > 0;
+  const hasYear = (filters.yearMin || 0) > 0;
   const hasBoot = (filters.minBoot || 0) > 0 || (filters.maxBoot || 1200) < 1200;
   const transCount = (filters.transmission || []).length;
   const colorCount = (filters.colors || []).length;
@@ -55,6 +56,7 @@ export function HomeScreen({
     (hasBudget ? 1 : 0) +
     (hasRange ? 1 : 0) +
     (hasSeats ? 1 : 0) +
+    (hasYear ? 1 : 0) +
     (transCount > 0 ? 1 : 0) +
     (colorCount > 0 ? 1 : 0) +
     (hasBoot ? 1 : 0);
@@ -67,6 +69,7 @@ export function HomeScreen({
       budgetMin: 0,
       budgetMax: 80000,
       seats: 0,
+      yearMin: 0,
       platforms: [],
       countries: [],
       minRange: 0,
@@ -239,6 +242,19 @@ export function HomeScreen({
             </View>
           </FilterGroup>
 
+          <FilterGroup label="Registration Year" count={hasYear ? 1 : 0} icon={<YearIcon />}>
+            <View style={styles.rowGap}>
+              {[0, 2024, 2022, 2020, 2018, 2015, 2010].map((y) => {
+                const active = (filters.yearMin || 0) === y;
+                return (
+                  <GradientPill key={y} active={active} onPress={() => setFilters((f) => ({ ...f, yearMin: y }))} style={styles.seatPill}>
+                    <Text style={[styles.seatLabel, { color: active ? "#fff" : colors.mid }]}>{y === 0 ? "Any" : `${y}+`}</Text>
+                  </GradientPill>
+                );
+              })}
+            </View>
+          </FilterGroup>
+
           <FilterGroup label="Minimum Seats" count={hasSeats ? 1 : 0} icon={<SeatsIcon />}>
             <View style={styles.rowGap}>
               {[0, 2, 4, 5, 7].map((s) => {
@@ -389,6 +405,13 @@ function ColorIcon() {
     </Svg>
   );
 }
+function YearIcon() {
+  return (
+    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={colors.grad2} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <Path d={"M4 6.5h16v13H4z M4 10.5h16 M8 4v4 M16 4v4"} />
+    </Svg>
+  );
+}
 function SeatsIcon() {
   return (
     <Svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke={colors.grad2} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
@@ -430,7 +453,7 @@ const styles = StyleSheet.create({
   filterGroups: { gap: 10 },
   wrapRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   wrapRowSm: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  rowGap: { flexDirection: "row", gap: 8 },
+  rowGap: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   helperText: { fontFamily: fonts.regular, fontSize: 12, color: colors.mid, marginBottom: 10 },
 
   transPill: { paddingVertical: 10, paddingHorizontal: 20 },

@@ -66,6 +66,7 @@ export function ResultsScreen({
       if ((filters.transmission || []).length && !filters.transmission.includes(car.transmission)) return false;
       if (platformFilter.length && !car.listings.some((l) => platformFilter.includes(l.name))) return false;
       if ((filters.countries || []).length && !car.listings.some((l) => listingInMarkets(l, filters.countries))) return false;
+      if ((filters.yearMin || 0) > 0 && !car.listings.some((l) => l.year >= filters.yearMin)) return false;
       if ((filters.colors || []).length && !car.listings.some((l) => filters.colors.includes(l.ext_color))) return false;
       return true;
     });
