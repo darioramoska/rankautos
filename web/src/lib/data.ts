@@ -7,7 +7,8 @@ export const CRITERIA: Criterion[] = [
   { key: "tech", label: "Technology", desc: "Infotainment, driver assist, connectivity" },
   { key: "reliability", label: "Reliability", desc: "Owner reliability & warranty coverage" },
   { key: "value", label: "Value for Money", desc: "Price vs equipment & running costs" },
-  { key: "charging", label: "Charging Speed", desc: "Peak DC charging rate & network access" },
+  { key: "environmental", label: "Environmental", desc: "Emissions, road-tax band & low-emission-zone access — estimated from fuel type, efficiency and model year, not an official CO₂ figure" },
+  { key: "charging", label: "Charging Speed", desc: "Peak DC charging rate & network access — electric & plug-in hybrid only" },
 ];
 
 export const PLATFORMS: Platform[] = [

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { CRITERIA } from "@/lib/data";
-import { bestListing, fmt, scoreColor } from "@/lib/scoring";
+import { bestListing, chargingApplies, criterionScore, fmt, scoreColor } from "@/lib/scoring";
 import type { CarModel, Weights } from "@/lib/types";
 import { CarImage } from "./CarImage";
 import { ScoreBadge } from "./ScoreBadge";
@@ -53,11 +53,10 @@ export function CarDetailModal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full overflow-auto"
+        className="w-full overflow-auto max-w-[760px] lg:max-w-[980px]"
         style={{
           background: "var(--surface)",
           borderRadius: "28px 28px 0 0",
-          maxWidth: 760,
           maxHeight: "92vh",
           padding: "28px 28px 40px",
           boxShadow: "var(--shadow-lg)",
@@ -96,63 +95,85 @@ export function CarDetailModal({
           </div>
         </div>
 
-        <div
-          className="rounded-2xl flex justify-center"
-          style={{ background: "var(--bg)", padding: 20, marginBottom: 20 }}
-        >
-          <CarImage car={car} w={260} h={146} />
-        </div>
-
-        <div
-          className="grid"
-          style={{ gridTemplateColumns: "repeat(auto-fit,minmax(90px,1fr))", gap: 10, marginBottom: 24 }}
-        >
-          {stats.map((s) => (
-            <div key={s.l} className="rounded-xl text-center" style={{ background: "var(--bg)", padding: "10px 12px" }}>
-              <div className="text-base font-bold">{s.v}</div>
-              <div className="text-[10px] uppercase" style={{ color: "var(--mid)", marginTop: 2, letterSpacing: 0.5 }}>
-                {s.l}
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] lg:gap-10" style={{ marginBottom: 28 }}>
+          <div>
+            <div
+              className="rounded-2xl flex justify-center"
+              style={{ background: "var(--bg)", padding: 20, marginBottom: 20 }}
+            >
+              <CarImage car={car} w={260} h={146} />
             </div>
-          ))}
-        </div>
 
-        <div style={{ marginBottom: 28 }}>
-          <div
-            className="text-xs font-semibold uppercase"
-            style={{ letterSpacing: 1, color: "var(--mid)", marginBottom: 12 }}
-          >
-            Score Breakdown ({car.year} model)
+            <div
+              className="grid"
+              style={{ gridTemplateColumns: "repeat(auto-fit,minmax(90px,1fr))", gap: 10 }}
+            >
+              {stats.map((s) => (
+                <div key={s.l} className="rounded-xl text-center" style={{ background: "var(--bg)", padding: "10px 12px" }}>
+                  <div className="text-base font-bold">{s.v}</div>
+                  <div className="text-[10px] uppercase" style={{ color: "var(--mid)", marginTop: 2, letterSpacing: 0.5 }}>
+                    {s.l}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-col gap-2.5">
-            {CRITERIA.map((c) => {
-              const raw = car.scores[c.key] || 0;
-              const w = weights[c.key] || 0;
-              const col = scoreColor(raw);
-              return (
-                <div key={c.key}>
-                  <div className="flex justify-between" style={{ marginBottom: 4 }}>
-                    <span className="text-[13px] font-medium">{c.label}</span>
-                    <div className="flex items-center gap-2">
-                      {w === 0 && (
+
+          <div className="mt-6 lg:mt-0">
+            <div
+              className="text-xs font-semibold uppercase"
+              style={{ letterSpacing: 1, color: "var(--mid)", marginBottom: 12 }}
+            >
+              Score Breakdown ({car.year} model)
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {CRITERIA.map((c) => {
+                if (c.key === "charging" && !chargingApplies(car)) {
+                  return (
+                    <div key={c.key}>
+                      <div className="flex justify-between" style={{ marginBottom: 4 }}>
+                        <span className="text-[13px] font-medium" style={{ color: "var(--mid)" }}>
+                          {c.label}
+                        </span>
                         <span
                           className="text-[10px] rounded-full"
                           style={{ color: "var(--mid)", background: "var(--bg)", padding: "1px 7px" }}
                         >
-                          not weighted
+                          Electric / plug-in only
                         </span>
-                      )}
-                      <span className="text-[13px] font-bold" style={{ color: col }}>
-                        {raw.toFixed(1)}
-                      </span>
+                      </div>
+                      <div className="rounded-full overflow-hidden" style={{ height: 5, background: "var(--border)" }} />
+                    </div>
+                  );
+                }
+                const raw = criterionScore(car, c.key);
+                const w = weights[c.key] || 0;
+                const col = scoreColor(raw);
+                return (
+                  <div key={c.key}>
+                    <div className="flex justify-between" style={{ marginBottom: 4 }}>
+                      <span className="text-[13px] font-medium">{c.label}</span>
+                      <div className="flex items-center gap-2">
+                        {w === 0 && (
+                          <span
+                            className="text-[10px] rounded-full"
+                            style={{ color: "var(--mid)", background: "var(--bg)", padding: "1px 7px" }}
+                          >
+                            not weighted
+                          </span>
+                        )}
+                        <span className="text-[13px] font-bold" style={{ color: col }}>
+                          {raw.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="rounded-full overflow-hidden" style={{ height: 5, background: "var(--border)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${raw * 10}%`, background: col }} />
                     </div>
                   </div>
-                  <div className="rounded-full overflow-hidden" style={{ height: 5, background: "var(--border)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${raw * 10}%`, background: col }} />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
 

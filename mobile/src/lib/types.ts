@@ -16,9 +16,15 @@ export type CriterionKey =
   | "tech"
   | "reliability"
   | "value"
+  | "environmental"
   | "charging";
 
-export type Scores = Record<CriterionKey, number>;
+// Every criterion except "environmental" has a stored score (a score_* column in
+// car_models, or a literal in the bundled catalogue). "environmental" is derived in
+// scoring.ts from fuel type until real emissions data is ingested, so it stays optional
+// here — a stored value, once one exists, takes precedence over the estimate.
+export type StoredCriterionKey = Exclude<CriterionKey, "environmental">;
+export type Scores = Record<StoredCriterionKey, number> & { environmental?: number };
 export type Weights = Record<CriterionKey, number>;
 
 export interface Platform {

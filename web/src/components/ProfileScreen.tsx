@@ -26,10 +26,16 @@ export function ProfileScreen() {
   const { user, loading, configured, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
-      <div className="gradient-hero" style={{ padding: "60px 32px 44px", position: "relative", overflow: "hidden" }}>
+    <div className="min-h-screen lg:flex lg:items-start lg:gap-8 lg:mx-auto" style={{ maxWidth: 1040 }}>
+      {/* On desktop this becomes a vertical card pinned to the left, instead of a full-width
+          band above the account content — so the account details start near the top of the
+          viewport rather than being pushed down by a tall banner. */}
+      <div
+        className="gradient-hero relative lg:rounded-3xl lg:flex-shrink-0 lg:self-start lg:sticky lg:top-6"
+        style={{ padding: "60px 32px 44px", overflow: "hidden" }}
+      >
         <div className="absolute rounded-full gradient-blob-warm" style={{ width: 260, height: 260, right: -60, top: -40, opacity: 0.35, filter: "blur(30px)" }} />
-        <div className="mx-auto" style={{ maxWidth: 480, position: "relative" }}>
+        <div className="mx-auto lg:mx-0 lg:w-[260px]" style={{ maxWidth: 480, position: "relative" }}>
           <div
             className="flex items-center justify-center rounded-full tile-glass"
             style={{ width: 56, height: 56, marginBottom: 16 }}
@@ -50,7 +56,7 @@ export function ProfileScreen() {
         </div>
       </div>
 
-      <div className="mx-auto" style={{ maxWidth: 480, padding: "28px 32px 100px" }}>
+      <div className="mx-auto lg:mx-0 lg:flex-1" style={{ maxWidth: 480, padding: "28px 32px 100px" }}>
         {!configured ? (
           <div className="rounded-2xl text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: 24, color: "var(--mid)", fontSize: 13 }}>
             Accounts aren&apos;t configured yet.

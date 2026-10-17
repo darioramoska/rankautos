@@ -1,7 +1,7 @@
 // Extracted from the old always-visible HomeScreen hero block. Now used only by
 // Onboarding (slide 1). Fills the full slide height with the gradient and centers
 // everything — the parent slide wrapper just needs to be full-height for this to work.
-import { CAR_DATA, PLATFORMS } from "@/lib/data";
+import { CAR_DATA, CRITERIA, PLATFORMS } from "@/lib/data";
 
 export function HeroSection() {
   const modelCount = CAR_DATA.length;
@@ -43,7 +43,7 @@ export function HeroSection() {
           <span className="gradient-text">ranked to find your dream car.</span>
         </h1>
         <p className="text-[15px]" style={{ marginTop: 18, color: "rgba(255,255,255,0.45)", lineHeight: 1.7 }}>
-          We scan AutoScout24, mobile.de, and {platformCount - 2} other EU platforms daily, score every listing across 7
+          We scan AutoScout24, mobile.de, and {platformCount - 2} other EU platforms daily, score every listing across {CRITERIA.length}
           criteria, and rank them by what matters to you.
         </p>
 
@@ -51,7 +51,7 @@ export function HeroSection() {
           {(
             [
               [String(modelCount), "models"],
-              ["7", "criteria"],
+              [String(CRITERIA.length), "criteria"],
               [String(platformCount), "EU platforms"],
               ["Daily", "refresh"],
             ] as const

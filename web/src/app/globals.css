@@ -166,3 +166,143 @@ input[type="range"]:active::-webkit-slider-thumb {
   cursor: grabbing;
   transform: scale(1.1);
 }
+
+/* ─── Modern surface layer ─────────────────────────────────────────────── */
+
+/* Faint aurora behind every page, so the frosted-glass surfaces below have
+   something to blur — flat --bg behind glass just reads as grey. */
+body {
+  background:
+    radial-gradient(60rem 40rem at 8% -12%, rgba(124, 58, 237, 0.13), transparent 60%),
+    radial-gradient(50rem 36rem at 100% 4%, rgba(192, 38, 211, 0.09), transparent 60%),
+    radial-gradient(44rem 32rem at 50% 115%, rgba(251, 122, 84, 0.08), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 1px 2px rgba(28, 19, 48, 0.04),
+    0 12px 32px -16px rgba(60, 30, 110, 0.22);
+}
+
+/* Light "liquid glass" bar: translucent white, strong blur, a bright top edge
+   catching the light and a soft violet drop shadow lifting it off the page. */
+.glass-nav {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.42));
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(124, 58, 237, 0.06),
+    0 16px 44px -10px rgba(60, 30, 110, 0.32),
+    0 2px 8px rgba(60, 30, 110, 0.08);
+}
+
+.nav-pill {
+  transition: background 0.25s ease, box-shadow 0.25s ease, color 0.2s ease, transform 0.15s ease;
+}
+.nav-pill:hover {
+  background: rgba(124, 58, 237, 0.08);
+}
+.nav-pill:active {
+  transform: scale(0.96);
+}
+.nav-pill[data-active="true"] {
+  background: linear-gradient(135deg, var(--grad-2) 0%, var(--grad-3) 100%);
+  box-shadow:
+    0 6px 18px -4px rgba(192, 38, 211, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* Result cards: frosted surface, gradient hairline that lights up on hover,
+   and the photo easing in a little — the hover reads as one gesture. */
+.result-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 22px;
+  border: 1px solid rgba(124, 58, 237, 0.1);
+  box-shadow:
+    0 1px 2px rgba(28, 19, 48, 0.04),
+    0 8px 24px -14px rgba(60, 30, 110, 0.2);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.result-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg, var(--grad-2), var(--grad-3) 55%, var(--warm-1));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.result-card:hover {
+  transform: translateY(-3px);
+  border-color: transparent;
+  box-shadow:
+    0 2px 4px rgba(28, 19, 48, 0.04),
+    0 26px 50px -18px rgba(124, 58, 237, 0.4);
+}
+.result-card:hover::before {
+  opacity: 1;
+}
+.result-card .car-thumb img {
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.result-card:hover .car-thumb img {
+  transform: scale(1.07);
+}
+/* Top three get a whisper of warmth so the podium reads at a glance. */
+.result-card[data-podium="true"] {
+  background:
+    linear-gradient(120deg, rgba(251, 122, 84, 0.07), transparent 40%),
+    rgba(255, 255, 255, 0.82);
+}
+
+/* In the components layer so Tailwind utilities like `hidden` still win. */
+@layer components {
+  .spec-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--mid);
+    background: rgba(124, 58, 237, 0.06);
+    border-radius: 999px;
+    padding: 3px 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-card,
+  .result-card .car-thumb img,
+  .nav-pill {
+    transition: none;
+  }
+  .result-card:hover,
+  .result-card:hover .car-thumb img {
+    transform: none;
+  }
+}
+
+/* CarImage sizes itself inline in px; on phones shrink the card thumbnail so the
+   name and price keep a usable column next to the score ring. */
+@media (max-width: 639px) {
+  .result-card .car-thumb {
+    width: 84px !important;
+    height: 60px !important;
+  }
+}

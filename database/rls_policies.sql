@@ -11,6 +11,11 @@
 -- scrape_jobs) get RLS enabled with zero policies -- that means "deny all"
 -- for anon/authenticated until real user auth is wired up and per-user
 -- policies are added.
+--
+-- NOTE: this file only covers the tables created by schema.sql. Any table
+-- created elsewhere needs RLS enabled where it is created, or it lands in the
+-- public schema wide open -- see migrations/004 for schema_migrations, which
+-- ingestion/src/migrateUp.ts creates and which was missed here originally.
 -- ============================================================
 
 ALTER TABLE platforms       ENABLE ROW LEVEL SECURITY;

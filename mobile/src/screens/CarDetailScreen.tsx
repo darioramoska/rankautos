@@ -6,7 +6,7 @@ import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { CRITERIA } from "../lib/data";
-import { bestListing, fmt, scoreColor } from "../lib/scoring";
+import { bestListing, chargingApplies, criterionScore, fmt, scoreColor } from "../lib/scoring";
 import { useWeights } from "../lib/useWeights";
 import type { CarModel } from "../lib/types";
 import { colors, fonts, radius } from "../lib/theme";
@@ -27,12 +27,19 @@ export function CarDetailScreen({
   onOpenPlatform: (platform: { name: string; url: string; flag: string }) => void;
 }) {
   const { weights } = useWeights();
+  const applies = chargingApplies(car);
   const score = React.useMemo(() => {
-    const totalW = Object.values(weights).reduce((a, b) => a + b, 0);
+    let totalW = 0;
+    let sum = 0;
+    for (const c of CRITERIA) {
+      if (c.key === "charging" && !applies) continue;
+      const w = weights[c.key] || 0;
+      totalW += w;
+      sum += criterionScore(car, c.key) * w;
+    }
     if (!totalW) return 0;
-    const sum = CRITERIA.reduce((acc, c) => acc + (car.scores[c.key] || 0) * (weights[c.key] || 0), 0);
     return Math.round((sum / totalW) * 10) / 10;
-  }, [car, weights]);
+  }, [car, weights, applies]);
 
   const fuelIcon = FUEL_ICONS[car.fuel];
   const best = bestListing(car);
@@ -97,7 +104,20 @@ export function CarDetailScreen({
         <Text style={styles.breakdownTitle}>Score Breakdown ({car.year} model)</Text>
         <View style={styles.breakdownList}>
           {CRITERIA.map((c) => {
-            const raw = car.scores[c.key] || 0;
+            if (c.key === "charging" && !applies) {
+              return (
+                <View key={c.key}>
+                  <View style={styles.breakdownRow}>
+                    <Text style={[styles.breakdownLabel, { color: colors.mid }]}>{c.label}</Text>
+                    <View style={styles.notWeighted}>
+                      <Text style={styles.notWeightedText}>Electric / plug-in only</Text>
+                    </View>
+                  </View>
+                  <View style={styles.barTrack} />
+                </View>
+              );
+            }
+            const raw = criterionScore(car, c.key);
             const w = weights[c.key] || 0;
             const col = scoreColor(raw);
             return (

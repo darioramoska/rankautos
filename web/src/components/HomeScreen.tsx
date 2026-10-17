@@ -72,7 +72,7 @@ export function HomeScreen({
     });
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen flex flex-col">
       {/* Compact header — full hero/how-it-works content now lives in onboarding and Profile > Help.
           Sticky + a fade mask below it so cards dissolve smoothly as they scroll underneath,
           instead of cutting off hard at the header's edge. */}
@@ -116,7 +116,7 @@ export function HomeScreen({
           )}
         </div>
 
-        <div className="grid gap-2.5">
+        <div className="grid gap-2.5 md:grid-cols-2 md:items-start">
           {/* Manufacturer */}
           <FilterGroup
             label="Manufacturer"

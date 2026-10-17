@@ -22,7 +22,7 @@ const TABS: Tab[] = [
       <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
         <path
           d="M4 9.5L10 4l6 5.5V16a1 1 0 01-1 1h-3v-5H8v5H5a1 1 0 01-1-1V9.5z"
-          stroke={active ? "#fff" : "rgba(255,255,255,0.55)"}
+          stroke={active ? "#fff" : "rgba(28,19,48,0.72)"}
           strokeWidth="1.8"
           strokeLinejoin="round"
         />
@@ -37,7 +37,7 @@ const TABS: Tab[] = [
       <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
         <path
           d="M3 5.5h14M6 10h8M9 14.5h2"
-          stroke={active ? "#fff" : "rgba(255,255,255,0.55)"}
+          stroke={active ? "#fff" : "rgba(28,19,48,0.72)"}
           strokeWidth="1.8"
           strokeLinecap="round"
         />
@@ -49,7 +49,7 @@ const TABS: Tab[] = [
     label: "Criteria",
     href: "/results#criteria",
     icon: (active) => {
-      const c = active ? "#fff" : "rgba(255,255,255,0.55)";
+      const c = active ? "#fff" : "rgba(28,19,48,0.72)";
       return (
         <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
           <line x1="5" y1="3" x2="5" y2="17" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
@@ -70,7 +70,7 @@ const TABS: Tab[] = [
       <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
         <path
           d="M4 15V9M10 15V5M16 15v-3.5"
-          stroke={active ? "#fff" : "rgba(255,255,255,0.55)"}
+          stroke={active ? "#fff" : "rgba(28,19,48,0.72)"}
           strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -83,7 +83,7 @@ const TABS: Tab[] = [
     label: "Profile",
     href: "/profile",
     icon: (active) => {
-      const c = active ? "#fff" : "rgba(255,255,255,0.55)";
+      const c = active ? "#fff" : "rgba(28,19,48,0.72)";
       return (
         <svg width="19" height="19" viewBox="0 0 20 20" fill="none">
           <circle cx="10" cy="7" r="3.2" stroke={c} strokeWidth="1.8" />
@@ -130,32 +130,29 @@ export function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none"
       style={{ paddingBottom: "max(14px, env(safe-area-inset-bottom))" }}
     >
-      <div
-        className="flex items-center gap-1 rounded-full pointer-events-auto"
-        style={{
-          background: "rgba(25, 10, 62, 0.88)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          boxShadow: "var(--shadow-lg)",
-          padding: 6,
-        }}
-      >
+      <div className="glass-nav flex items-center gap-1 rounded-full pointer-events-auto" style={{ padding: 6 }}>
         {TABS.map((tab) => {
           const isActive = active === tab.id;
+          // On desktop the results page already shows the priorities sidebar and the
+          // rankings list side by side, so a separate Criteria tab just scrolls to
+          // something already on screen — Rankings stays, Criteria is mobile-only.
+          const desktopOnly = tab.id === "criteria";
           return (
             <Link
               key={tab.id}
               href={tab.href}
               onClick={(e) => handleClick(e, tab)}
-              className="flex items-center gap-2 rounded-full transition-all duration-150"
-              style={{
-                padding: "10px 16px",
-                background: isActive ? "linear-gradient(135deg, var(--grad-2) 0%, var(--grad-3) 100%)" : "transparent",
-              }}
+              data-active={isActive}
+              aria-current={isActive ? "page" : undefined}
+              className={`nav-pill items-center gap-2 rounded-full ${desktopOnly ? "flex lg:hidden" : "flex"}`}
+              style={{ padding: "10px 14px" }}
             >
               {tab.icon(isActive)}
-              <span className="text-xs font-semibold" style={{ color: isActive ? "#fff" : "rgba(255,255,255,0.55)" }}>
+              {/* Five labelled tabs overflow a phone screen — below sm only the active tab keeps its label. */}
+              <span
+                className={`text-xs font-semibold ${isActive ? "" : "hidden sm:inline"}`}
+                style={{ color: isActive ? "#fff" : "var(--ink)", opacity: isActive ? 1 : 0.72 }}
+              >
                 {tab.label}
               </span>
             </Link>

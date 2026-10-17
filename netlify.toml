@@ -1,0 +1,9 @@
+# Netlify reads this from the repo root on every git-triggered build. The site lives
+# in web/, so build from there; publish is resolved relative to base.
+[build]
+  base = "web"
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

@@ -66,10 +66,19 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
     })();
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
-      {/* Top bar — sticky + a fade mask below it so cards dissolve smoothly as they scroll
-          underneath, instead of cutting off hard at the header's edge. */}
-      <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 40 }}>
+    <div className="min-h-screen">
+      {/* Top bar — sticky frosted glass, so cards blur softly as they scroll underneath. */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
+          background: "rgba(255,255,255,0.6)",
+          backdropFilter: "blur(20px) saturate(170%)",
+          WebkitBackdropFilter: "blur(20px) saturate(170%)",
+          borderBottom: "1px solid rgba(124,58,237,0.08)",
+        }}
+      >
         <div
           className="mx-auto flex items-center justify-between"
           style={{ maxWidth: 1180, padding: "16px 32px" }}
@@ -93,10 +102,6 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
           </div>
         </div>
       </div>
-      <div
-        className="pointer-events-none"
-        style={{ position: "sticky", top: 57, zIndex: 39, height: 18, marginBottom: -18, background: "linear-gradient(to bottom, var(--bg), transparent)" }}
-      />
 
       <div className="mx-auto" style={{ maxWidth: 1180, padding: "28px 32px 110px" }}>
         <div className="flex items-center justify-between flex-wrap gap-3" style={{ marginBottom: 20 }}>
@@ -126,10 +131,7 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
         <div className="grid gap-6 grid-cols-1 lg:[grid-template-columns:minmax(0,320px)_1fr]">
           {/* Sidebar */}
           <aside id="criteria" className="self-start lg:sticky" style={{ top: 24, scrollMarginTop: 90 }}>
-            <div
-              className="rounded-2xl"
-              style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: 20, boxShadow: "var(--shadow)" }}
-            >
+            <div className="glass-panel" style={{ borderRadius: 22, padding: 20 }}>
               <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
                 <div className="text-sm font-bold">Your priorities</div>
                 <button onClick={reset} className="text-xs font-semibold" style={{ color: "var(--grad-2)" }}>
@@ -150,7 +152,7 @@ export function ResultsScreen({ cars }: { cars: CarModel[] }) {
           </aside>
 
           {/* Results list */}
-          <div id="rankings" className="flex flex-col gap-2" style={{ scrollMarginTop: 90 }}>
+          <div id="rankings" className="flex flex-col gap-3" style={{ scrollMarginTop: 90 }}>
             {ranked.length === 0 ? (
               <div
                 className="text-center rounded-2xl"

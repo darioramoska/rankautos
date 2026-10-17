@@ -18,9 +18,11 @@ export function FilterGroup({
     <div
       className="rounded-2xl overflow-hidden transition-shadow duration-200"
       style={{
-        border: `1.5px solid ${open ? "transparent" : "var(--border)"}`,
-        background: "var(--surface)",
-        boxShadow: open ? "var(--shadow-lg)" : "none",
+        border: `1px solid ${open ? "rgba(255,255,255,0.9)" : "rgba(124,58,237,0.1)"}`,
+        background: open ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.7)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        boxShadow: open ? "var(--shadow-lg)" : "0 1px 2px rgba(28,19,48,0.04), 0 8px 20px -14px rgba(60,30,110,0.2)",
       }}
     >
       <button
