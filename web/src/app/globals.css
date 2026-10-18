@@ -306,3 +306,183 @@ body {
     height: 60px !important;
   }
 }
+
+/* ─── Car detail: showroom stage ───────────────────────────────────────── */
+
+.showroom {
+  --rx: 4deg;
+  --ry: -6deg;
+  position: relative;
+  height: 250px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  perspective: 900px;
+  background:
+    radial-gradient(60% 55% at 50% 42%, var(--tint) 0%, transparent 70%),
+    radial-gradient(120% 90% at 50% 0%, #ffffff 0%, var(--bg) 70%);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.showroom-label {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  right: 88px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  color: var(--mid);
+  z-index: 2;
+}
+.showroom-label span {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--grad-2), var(--grad-3));
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-right: 6px;
+}
+.showroom-label strong {
+  color: var(--ink);
+}
+
+.showroom-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  width: 270px;
+  height: 80px;
+}
+.showroom-floor .disc {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+}
+.showroom-floor .disc-3 {
+  bottom: 0;
+  width: 270px;
+  height: 62px;
+  background: radial-gradient(closest-side, rgba(124, 58, 237, 0.1), rgba(124, 58, 237, 0.03) 80%, transparent);
+  border: 1px solid rgba(124, 58, 237, 0.1);
+}
+.showroom-floor .disc-2 {
+  bottom: 10px;
+  width: 226px;
+  height: 50px;
+  background: linear-gradient(180deg, #ffffff 0%, #e9e4f8 100%);
+  box-shadow: 0 8px 18px rgba(60, 30, 110, 0.12), inset 0 -4px 0 rgba(124, 58, 237, 0.08);
+}
+.showroom-floor .disc-1 {
+  bottom: 20px;
+  width: 190px;
+  height: 40px;
+  background: radial-gradient(70% 70% at 50% 35%, #ffffff 0%, #efeafb 70%, #e2dbf6 100%);
+  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.08), 0 0 28px var(--tint);
+}
+
+.showroom-car {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  width: 290px;
+  max-width: 92%;
+  translate: -50% 0;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: showroom-float 5s ease-in-out infinite;
+}
+.showroom-car svg {
+  display: block;
+}
+
+.showroom-photo {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 64px;
+  height: 44px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid #fff;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s;
+}
+.showroom-photo:hover {
+  transform: scale(1.08);
+}
+.showroom-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@keyframes showroom-float {
+  0%,
+  100% {
+    translate: -50% 0;
+  }
+  50% {
+    translate: -50% -4px;
+  }
+}
+
+/* ─── Car detail: stat tiles + score gauges ────────────────────────────── */
+
+.stat-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+}
+.stat-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gauge-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.gauge-card--off {
+  box-shadow: none;
+  background: var(--bg);
+}
+.gauge-arc {
+  transition: stroke-dasharray 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .showroom-car {
+    animation: none;
+    transition: none;
+  }
+  .gauge-arc {
+    transition: none;
+  }
+}

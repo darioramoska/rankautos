@@ -5,7 +5,7 @@ import type { CarModel } from "@/lib/types";
 
 const wikiCache: Record<string, string | false | null> = {};
 
-function useWikiImage(query: string) {
+export function useWikiImage(query: string) {
   const [url, setUrl] = useState<string | null>(
     typeof wikiCache[query] === "string" ? (wikiCache[query] as string) : null,
   );
