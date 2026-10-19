@@ -1,7 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CUTOUTS, type Cutout } from "@/lib/cutouts";
 import type { CarModel } from "@/lib/types";
+
+// Catalog rows without an explicit wikipedia_query fall back to "Brand Model Variant"
+// (e.g. "Citroën C5 Aircross BlueHDi"), which rarely names an article. Try the full
+// string first, then drop trailing words down to "Brand Model".
+const candidates = (query: string) => {
+  const words = query.trim().split(/\s+/);
+  const out: string[] = [];
+  for (let n = words.length; n >= Math.min(2, words.length); n--) out.push(words.slice(0, n).join(" "));
+  return out;
+};
+
+export function findCutout(query: string): Cutout | undefined {
+  for (const q of candidates(query)) if (CUTOUTS[q]) return CUTOUTS[q];
+  return undefined;
+}
 
 const wikiCache: Record<string, string | false | null> = {};
 
@@ -17,16 +33,21 @@ export function useWikiImage(query: string) {
       return;
     }
     wikiCache[query] = null; // mark as in-flight
-    fetch(
-      `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(
-        query,
-      )}&prop=pageimages&format=json&pithumbsize=500&origin=*`,
-    )
-      .then((r) => r.json())
-      .then((data) => {
+    (async () => {
+      for (const q of candidates(query)) {
+        const data = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&redirects=1&titles=${encodeURIComponent(
+            q,
+          )}&prop=pageimages&format=json&pithumbsize=500&origin=*`,
+        ).then((r) => r.json());
         const pages = data?.query?.pages || {};
         const page = pages[Object.keys(pages)[0]];
-        const src: string | false = page?.thumbnail?.source || false;
+        const src: string | undefined = page?.thumbnail?.source;
+        if (src) return src;
+      }
+      return false as const;
+    })()
+      .then((src) => {
         wikiCache[query] = src;
         if (src) setUrl(src);
       })
@@ -49,8 +70,22 @@ export function CarImage({
   h: number;
   className?: string;
 }) {
-  const url = useWikiImage(car.wikiQuery);
+  const cut = findCutout(car.wikiQuery);
+  const [cutFailed, setCutFailed] = useState(false);
+  const url = useWikiImage(cut && !cutFailed ? "" : car.wikiQuery);
   const [failed, setFailed] = useState(false);
+
+  if (cut && !cutFailed) {
+    return (
+      <div
+        className={`car-cutout tile-soft flex-shrink-0 rounded-xl overflow-hidden ${className}`}
+        style={{ width: w, height: h }}
+      >
+        <span className="car-cutout-shadow" aria-hidden />
+        <img src={cut.src} alt={`${car.brand} ${car.name}`} onError={() => setCutFailed(true)} />
+      </div>
+    );
+  }
 
   if (url && !failed) {
     return (

@@ -1,9 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { CUTOUTS } from "@/lib/cutouts";
 import type { CarModel } from "@/lib/types";
-import { useWikiImage } from "./CarImage";
+import { findCutout, useWikiImage } from "./CarImage";
 
 // The car standing on a lit pedestal. Where we have a background-removed photo
 // (public/cars, built from Wikimedia Commons) that real car is shown with a contact
@@ -11,7 +10,7 @@ import { useWikiImage } from "./CarImage";
 // painted in the model's colour, with the raw photo in a small inset.
 // Moving the pointer over the stage tilts the car in 3D (via --rx/--ry).
 export function CarShowroom({ car }: { car: CarModel }) {
-  const cut = CUTOUTS[car.wikiQuery];
+  const cut = findCutout(car.wikiQuery);
   const [cutFailed, setCutFailed] = useState(false);
   const showCut = cut && !cutFailed;
   const url = useWikiImage(showCut ? "" : car.wikiQuery);

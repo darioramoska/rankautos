@@ -572,3 +572,27 @@ body {
   opacity: 1;
   text-decoration: underline;
 }
+
+/* Result-card thumbnail when a background-removed photo exists */
+.car-cutout {
+  position: relative;
+  background: radial-gradient(90% 80% at 50% 40%, #ffffff 0%, #f1e9fd 60%, #fbe7f8 100%);
+}
+.car-cutout img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center 70%;
+  padding: 6px 6px 8px;
+  filter: drop-shadow(0 4px 4px rgba(28, 19, 48, 0.22));
+}
+.car-cutout-shadow {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 7px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(60, 30, 110, 0.28), transparent);
+}
