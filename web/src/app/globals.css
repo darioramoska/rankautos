@@ -321,7 +321,12 @@ body {
     radial-gradient(60% 55% at 50% 42%, var(--tint) 0%, transparent 70%),
     radial-gradient(120% 90% at 50% 0%, #ffffff 0%, var(--bg) 70%);
   border: 1px solid var(--border);
-  margin-bottom: 16px;
+}
+@media (min-width: 1024px) {
+  .showroom {
+    height: auto;
+    min-height: 250px;
+  }
 }
 
 .showroom-label {
@@ -438,41 +443,65 @@ body {
 
 /* ─── Car detail: stat tiles + score gauges ────────────────────────────── */
 
-.stat-tile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 10px 12px;
-  box-shadow: var(--shadow);
+/* One tile style for score gauges and key specs, so both grids read as a set. */
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--mid);
+  margin-bottom: 12px;
 }
-.stat-icon {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.gauge-card {
+.detail-tile {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 12px 8px 10px;
+  padding: 14px 8px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   box-shadow: var(--shadow);
+  min-width: 0;
 }
-.gauge-card--off {
+.detail-tile--off {
   box-shadow: none;
   background: var(--bg);
 }
+.detail-tile--off .detail-tile-title {
+  color: var(--mid);
+}
+.detail-tile-title {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.detail-tile-value {
+  font-size: 15px;
+  font-weight: 700;
+}
+.detail-tile-sub {
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--mid);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .gauge-arc {
   transition: stroke-dasharray 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -485,4 +514,61 @@ body {
   .gauge-arc {
     transition: none;
   }
+}
+
+/* Real-car cut-out variant of the showroom */
+.showroom-car--photo {
+  width: 280px;
+  bottom: 40px;
+}
+.showroom-car--photo > img:not(.showroom-mirror) {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  object-position: bottom;
+  filter: drop-shadow(0 10px 10px rgba(28, 19, 48, 0.25));
+}
+.showroom-contact {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -4px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(20, 12, 40, 0.45), transparent);
+  filter: blur(2px);
+}
+.showroom-mirror {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  object-position: top;
+  transform: scaleY(-1);
+  opacity: 0.16;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 35%);
+  mask-image: linear-gradient(to top, #000 0%, transparent 35%);
+  pointer-events: none;
+}
+.showroom-credit {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 6px;
+  font-size: 9px;
+  color: var(--mid);
+  opacity: 0.75;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 2;
+}
+.showroom-credit:hover {
+  opacity: 1;
+  text-decoration: underline;
 }

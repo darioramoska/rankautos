@@ -1,14 +1,20 @@
 "use client";
 
 import { useId, useState } from "react";
+import { CUTOUTS } from "@/lib/cutouts";
 import type { CarModel } from "@/lib/types";
 import { useWikiImage } from "./CarImage";
 
-// A drawn car standing on a lit pedestal. The body is an SVG side profile shaped by
-// body type and painted in the model's colour; the real photo sits in a small inset.
+// The car standing on a lit pedestal. Where we have a background-removed photo
+// (public/cars, built from Wikimedia Commons) that real car is shown with a contact
+// shadow and floor reflection; otherwise an SVG side profile shaped by body type and
+// painted in the model's colour, with the raw photo in a small inset.
 // Moving the pointer over the stage tilts the car in 3D (via --rx/--ry).
 export function CarShowroom({ car }: { car: CarModel }) {
-  const url = useWikiImage(car.wikiQuery);
+  const cut = CUTOUTS[car.wikiQuery];
+  const [cutFailed, setCutFailed] = useState(false);
+  const showCut = cut && !cutFailed;
+  const url = useWikiImage(showCut ? "" : car.wikiQuery);
   const [failed, setFailed] = useState(false);
   const tint = `color-mix(in srgb, ${car.color} 38%, transparent)`;
 
@@ -31,7 +37,7 @@ export function CarShowroom({ car }: { car: CarModel }) {
         <strong>{car.brand}</strong> {car.name}
       </div>
 
-      {url && !failed && (
+      {!showCut && url && !failed && (
         <a className="showroom-photo" href={url} target="_blank" rel="noreferrer" title="Real photo">
           <img src={url} alt={`${car.brand} ${car.name}`} onError={() => setFailed(true)} />
         </a>
@@ -43,9 +49,22 @@ export function CarShowroom({ car }: { car: CarModel }) {
         <span className="disc disc-1" />
       </div>
 
-      <div className="showroom-car">
-        <CarDrawing color={car.color} type={car.type} label={`${car.brand} ${car.name}`} />
-      </div>
+      {showCut ? (
+        <>
+          <div className="showroom-car showroom-car--photo">
+            <span className="showroom-contact" aria-hidden />
+            <img src={cut.src} alt={`${car.brand} ${car.name}`} onError={() => setCutFailed(true)} />
+            <img className="showroom-mirror" src={cut.src} alt="" aria-hidden />
+          </div>
+          <a className="showroom-credit" href={cut.source} target="_blank" rel="noreferrer" title={`Photo: ${cut.credit} · ${cut.license} · background removed`}>
+            Photo: {cut.credit} · {cut.license}, background removed
+          </a>
+        </>
+      ) : (
+        <div className="showroom-car">
+          <CarDrawing color={car.color} type={car.type} label={`${car.brand} ${car.name}`} />
+        </div>
+      )}
     </div>
   );
 }

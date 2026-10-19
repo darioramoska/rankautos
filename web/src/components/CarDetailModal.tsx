@@ -100,67 +100,43 @@ export function CarDetailModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] lg:gap-8" style={{ marginBottom: 28 }}>
+        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 lg:gap-8" style={{ marginBottom: 12 }}>
+          <CarShowroom car={car} />
+
           <div>
-            <CarShowroom car={car} />
-
-            <div className="grid grid-cols-2" style={{ gap: 8 }}>
-              {stats.map((s) => (
-                <div key={s.l} className="stat-tile">
-                  <div className="stat-icon" style={{ background: `color-mix(in srgb, ${s.c} 14%, transparent)` }}>
-                    <StatIcon kind={s.i} color={s.c} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[15px] font-bold truncate" style={{ color: s.l === "NCAP" ? s.c : "var(--ink)" }}>
-                      {s.v}
-                    </div>
-                    <div className="text-[10px] uppercase" style={{ color: "var(--mid)", letterSpacing: 0.5 }}>
-                      {s.l}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-6 lg:mt-0">
-            <div
-              className="text-xs font-semibold uppercase"
-              style={{ letterSpacing: 1, color: "var(--mid)", marginBottom: 12 }}
-            >
-              Score Breakdown ({car.year} model)
-            </div>
+            <div className="section-label">Score Breakdown ({car.year} model)</div>
             <div className="grid grid-cols-2 sm:grid-cols-4" style={{ gap: 10 }}>
               {CRITERIA.map((c) => {
-                if (c.key === "charging" && !chargingApplies(car)) {
-                  return (
-                    <div key={c.key} className="gauge-card gauge-card--off">
-                      <Gauge value={null} />
-                      <div className="text-[12px] font-semibold" style={{ color: "var(--mid)", marginTop: 8 }}>
-                        {c.label}
-                      </div>
-                      <div className="text-[10px]" style={{ color: "var(--mid)", marginTop: 2 }}>
-                        Electric / plug-in only
-                      </div>
-                    </div>
-                  );
-                }
-                const raw = criterionScore(car, c.key);
+                const off = c.key === "charging" && !chargingApplies(car);
+                const raw = off ? null : criterionScore(car, c.key);
                 const w = weights[c.key] || 0;
                 return (
-                  <div key={c.key} className="gauge-card" title={c.desc}>
+                  <div key={c.key} className={`detail-tile${off ? " detail-tile--off" : ""}`} title={c.desc}>
                     <Gauge value={raw} />
-                    <div className="text-[12px] font-semibold leading-tight" style={{ marginTop: 8 }}>
-                      {c.label}
-                    </div>
-                    <div className="text-[10px]" style={{ color: "var(--mid)", marginTop: 2 }}>
-                      {w === 0 ? "not weighted" : scoreWord(raw)}
+                    <div className="detail-tile-title">{c.label}</div>
+                    <div className="detail-tile-sub">
+                      {raw == null ? "EV & plug-in only" : w === 0 ? "not weighted" : scoreWord(raw)}
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
+        </div>
+
+        <div className="section-label" style={{ marginTop: 20 }}>Key specs</div>
+        <div className="grid grid-cols-3 sm:grid-cols-6" style={{ gap: 10, marginBottom: 28 }}>
+          {stats.map((s) => (
+            <div key={s.l} className="detail-tile">
+              <div className="stat-icon" style={{ background: `color-mix(in srgb, ${s.c} 14%, transparent)` }}>
+                <StatIcon kind={s.i} color={s.c} />
+              </div>
+              <div className="detail-tile-title detail-tile-value" style={s.l === "NCAP" ? { color: s.c } : undefined}>
+                {s.v}
+              </div>
+              <div className="detail-tile-sub">{s.l}</div>
+            </div>
+          ))}
         </div>
 
         <ListingsTable car={car} weights={weights} platformFilter={platformFilter} />
